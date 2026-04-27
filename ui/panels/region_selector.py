@@ -34,19 +34,16 @@ class RegionSelector(QWidget):
             painter.setPen(pen)
             painter.drawRect(self.selection)
 
-
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.origin = event.position().toPoint()
             self.selection = QRect()
             self.is_dragging = True
 
-
     def mouseMoveEvent(self, event):
         if self.is_dragging:
             self.selection = QRect(self.origin, event.position().toPoint()).normalized()
             self.update()
-
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
