@@ -30,3 +30,282 @@ class HotkeyCapture(QLineEdit):
 
         key = event.key()
 
+        if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self._capturing = False
+            self.setPlaceholderText("Click para asignar...")
+            self.confirmed.emit()
+            return
+
+        if key == Qt.Key.Key_Escape:
+            self._capturing = False
+            self.clear()
+            self.setPlaceholderText("Click para asignar...")
+            return
+
+        if key in (Qt.Key.Key_Control, Qt.Key.Key_Shift,
+                   Qt.Key.Key_Alt, Qt.Key.Key_Meta):
+            return
+
+        modifiers = event.modifiers()
+        parts = []
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
+            parts.append("ctrl")
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            parts.append("shift")
+        if modifiers & Qt.KeyboardModifier.AltModifier:
+            parts.append("alt")
+
+        key_text = event.text()
+        if not key_text or not key_text.isprintable():
+            key_text = QKeySequence(key).toString().lower()
+        if key_text:
+            parts.append(key_text.lower())
+
+        if parts:
+            self.setText("+".join(parts))
+
+class HotkeyBadge(QWidget):
+    def __init__(self, macro_id, hotkey):
+        super().__init__()
+        self.macro_id = macro_id
+        self._confirming = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.badge = QPushButton(hotkey if hotkey else "+")
+        self.badge.setProperty("class", "HotkeyBadge" if hotkey else "HotkeyBadge--empty")
+        self.badge.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.badge.setFixedHeight(24)
+        self.badge.clicked.connect(self._enter_edit)
+
+        self.editor = HotkeyCapture()
+        self.editor.setFixedWidth(90)
+        self.editor.setFixedHeight(24)
+        self.editor.hide()
+        self.editor.confirmed.connect(self._confirm)
+        self.editor.installEventFilter(self)
+
+        layout.addWidget(self.badge)
+        layout.addWidget(self.editor)
+
+    def _enter_edit(self):
+        texto_actual = self.badge.text()
+        self.editor.setText("" if texto_actual == "+" else texto_actual)
+        self.badge.hide()
+        self.editor.show()
+        self.editor.setFocus()
+
+    def _confirm(self):
+        if self._confirming:
+            return
+        self._confirming = True
+        nuevo = self.editor.text().strip()
+        update_macro_hotkey(self.macro_id, nuevo or None)
+        self.badge.setText(nuevo if nuevo else "+")
+        clase = "HotkeyBadge" if nuevo else "HotkeyBadge--empty"
+        self.badge.setProperty("class", clase)
+        self.badge.style().unpolish(self.badge)
+        self.badge.style().polish(self.badge)
+        self.editor.hide()
+        self.badge.show()
+        self._confirming = False
+
+    def eventFilter(self, obj, event):
+        if obj is self.editor and event.type() == QEvent.Type.FocusOut:
+            QTimer.singleShot(0, self._confirm)
+        return super().eventFilter(obj, event)
+
+class MacroRow(QFrame):
+    delete_requested = Signal(int)
+
+    def __init__(self, macro):
+        super().__init__()
+        self.macro_id = macro["id"]
+        self.macro_data = macro
+        self.setFixedHeight(38)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 0, 8, 0)
+        layout.setSpacing(8)
+
+        tipo_icon = QLabel("📋" if macro["type"] == "text" else "⚡")
+        tipo_icon.setFixedWidth(18)
+        tipo_icon.setProperty("class", "TypeIcon")
+
+        self.lbl_nombre = QLabel(macro["name"])
+        self.lbl_nombre.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.lbl_nombre.setProperty("class", "MacroRowLabel")
+        self.lbl_nombre.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        badge = HotkeyBadge(macro["id"], macro["hotkey"])
+
+        btn_delete = QPushButton("✕")
+        btn_delete.setFixedSize(22, 22)
+        btn_delete.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_delete.setProperty("class", "DeleteButton")
+        btn_delete.clicked.connect(lambda: self.delete_requested.emit(self.macro_id))
+
+        layout.addWidget(tipo_icon)
+        layout.addWidget(self.lbl_nombre)
+        layout.addWidget(badge)
+        layout.addWidget(btn_delete)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Solo ejecutar si el click no fue en el badge ni en delete
+            child = self.childAt(event.position().toPoint())
+            if child is self.lbl_nombre or child is None:
+                self._ejecutar()
+        super().mousePressEvent(event)
+
+    def _ejecutar(self):
+        # Señal hacia MacrosPanel via parent
+        parent = self.parent()
+        while parent and not isinstance(parent, MacrosPanel):
+            parent = parent.parent()
+        if parent:
+            parent._ejecutar(self.macro_data)
+
+
+class MacrosPanel(QWidget):
+    macro_triggered = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._init_ui()
+        self._cargar_macros()
+
+    def _init_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(10)
+
+        # ── Formulario superior ──
+        form = QWidget()
+        form_layout = QVBoxLayout(form)
+        form_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.setSpacing(6)
+
+        lbl_nueva = QLabel("Nueva macro")
+        lbl_nueva.setProperty("class", "SectionLabel")
+
+        self.input_nombre = QLineEdit()
+        self.input_nombre.setPlaceholderText("Nombre de la macro...")
+        self.input_nombre.setFixedHeight(32)
+        self.input_nombre.setProperty("class", "GlassInput")
+
+        # Toggle tipo con QButtonGroup para exclusividad real
+        tipo_row = QHBoxLayout()
+        tipo_row.setSpacing(6)
+        self.btn_text = QPushButton("Pegar texto")
+        self.btn_shell = QPushButton("Ejecutar")
+        self._btn_group = QButtonGroup(self)
+        self._btn_group.setExclusive(True)
+        for i, btn in enumerate((self.btn_text, self.btn_shell)):
+            btn.setFixedHeight(28)
+            btn.setCheckable(True)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setProperty("class", "ToggleButton")
+            self._btn_group.addButton(btn, i)
+        self.btn_text.setChecked(True)
+        self._btn_group.idClicked.connect(self._on_tipo_changed)
+        self._tipo = "text"
+        tipo_row.addWidget(self.btn_text)
+        tipo_row.addWidget(self.btn_shell)
+
+        self.lbl_tipo_desc = QLabel("El contenido se pegará en el chat al ejecutar.")
+        self.lbl_tipo_desc.setProperty("class", "DescLabel")
+        self.lbl_tipo_desc.setWordWrap(True)
+
+        self.input_contenido = QTextEdit()
+        self.input_contenido.setPlaceholderText("Escribe el texto a pegar...")
+        self.input_contenido.setFixedHeight(55)
+        self.input_contenido.setProperty("class", "GlassTextEdit")
+
+        btn_guardar = QPushButton("+ Añadir macro")
+        btn_guardar.setFixedHeight(30)
+        btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_guardar.setProperty("class", "AddButton")
+        btn_guardar.clicked.connect(self._guardar_macro)
+
+        form_layout.addWidget(lbl_nueva)
+        form_layout.addWidget(self.input_nombre)
+        form_layout.addLayout(tipo_row)
+        form_layout.addWidget(self.lbl_tipo_desc)
+        form_layout.addWidget(self.input_contenido)
+        form_layout.addWidget(btn_guardar)
+
+        # ── Separador ──
+        separador = QFrame()
+        separador.setFrameShape(QFrame.Shape.HLine)
+        separador.setProperty("class", "HSeparator")
+
+        # ── Lista inferior ──
+        lbl_lista = QLabel("Mis macros")
+        lbl_lista.setProperty("class", "SectionLabel")
+
+        self._lista_widget = QWidget()
+        self._lista_layout = QVBoxLayout(self._lista_widget)
+        self._lista_layout.setContentsMargins(0, 0, 0, 0)
+        self._lista_layout.setSpacing(4)
+        self._lista_layout.addStretch()
+
+        self._scroll = QScrollArea()
+        self._scroll.setWidget(self._lista_widget)
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        main_layout.addWidget(form)
+        main_layout.addWidget(separador)
+        main_layout.addWidget(lbl_lista)
+        main_layout.addWidget(self._scroll)
+
+    def _on_tipo_changed(self, btn_id):
+        self._tipo = "text" if btn_id == 0 else "shell"
+        if self._tipo == "text":
+            self.lbl_tipo_desc.setText("El contenido se pegará en el chat al ejecutar.")
+            self.input_contenido.setPlaceholderText("Escribe el texto a pegar...")
+        else:
+            self.lbl_tipo_desc.setText("El contenido se ejecutará como comando de sistema.")
+            self.input_contenido.setPlaceholderText("Ej: notepad.exe  /  python script.py")
+
+    def _guardar_macro(self):
+        nombre = self.input_nombre.text().strip()
+        contenido = self.input_contenido.toPlainText().strip()
+        if not nombre or not contenido:
+            return
+        create_macro(nombre, contenido, self._tipo)
+        self.input_nombre.clear()
+        self.input_contenido.clear()
+        self._cargar_macros()
+
+    def _cargar_macros(self):
+        while self._lista_layout.count() > 1:
+            item = self._lista_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        macros = get_all_macros()
+        if not macros:
+            lbl = QLabel("Sin macros. ¡Crea una arriba!")
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl.setProperty("class", "EmptyLabel")
+            self._lista_layout.insertWidget(0, lbl)
+            return
+
+        for macro in macros:
+            row = MacroRow(macro)
+            row.delete_requested.connect(self._eliminar)
+            self._lista_layout.insertWidget(self._lista_layout.count() - 1, row)
+
+    def _ejecutar(self, macro):
+        if macro["type"] == "text":
+            self.macro_triggered.emit(macro["content"])
+        else:
+            subprocess.Popen(macro["content"], shell=True)
+
+    def _eliminar(self, macro_id):
+        delete_macro(macro_id)
+        QTimer.singleShot(0, self._cargar_macros)
