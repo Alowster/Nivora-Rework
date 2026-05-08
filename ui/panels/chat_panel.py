@@ -102,3 +102,25 @@ class ChatPanel(QWidget):
         self.ocr_worker.error.connect(lambda e: print(f"OCR error: {e}"))
         self.ocr_worker.start()
 
+    def on_ocr_done(self, texto):
+        self.ocr_context = texto
+        self.input_field.setFocus()
+
+    def _create_ai_bubble(self):
+        bubble = QTextEdit()
+        bubble.setReadOnly(True)
+        bubble.setFixedWidth(260)
+        bubble.setFixedHeight(36)
+        bubble.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        bubble.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        bubble.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        bubble.setObjectName("AIBubble")
+        bubble.document().setDocumentMargin(12)
+        bubble.viewport().setStyleSheet("background: transparent;")
+        return bubble
+
+    def _update_bubble_height(self, bubble):
+        bubble.document().setTextWidth(260)
+        doc_height = int(bubble.document().size().height())
+        bubble.setFixedHeight(doc_height + 20)
+
