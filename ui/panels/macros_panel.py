@@ -64,11 +64,23 @@ class HotkeyCapture(QLineEdit):
         if parts:
             self.setText("+".join(parts))
 
+class ClickableLabel(QLabel):
+    clicked = Signal()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+
 class HotkeyBadge(QWidget):
+    changed = Signal()
+
     def __init__(self, macro_id, hotkey):
         super().__init__()
         self.macro_id = macro_id
         self._confirming = False
+        self._destroyed = False
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -98,33 +110,50 @@ class HotkeyBadge(QWidget):
         self.editor.setFocus()
 
     def _confirm(self):
-        if self._confirming:
+        if self._confirming or self._destroyed:
             return
         self._confirming = True
-        nuevo = self.editor.text().strip()
-        update_macro_hotkey(self.macro_id, nuevo or None)
-        self.badge.setText(nuevo if nuevo else "+")
-        clase = "HotkeyBadge" if nuevo else "HotkeyBadge--empty"
-        self.badge.setProperty("class", clase)
-        self.badge.style().unpolish(self.badge)
-        self.badge.style().polish(self.badge)
-        self.editor.hide()
-        self.badge.show()
-        self._confirming = False
+        try:
+            nuevo = self.editor.text().strip()
+            update_macro_hotkey(self.macro_id, nuevo or None)
+            self.badge.setText(nuevo if nuevo else "+")
+            clase = "HotkeyBadge" if nuevo else "HotkeyBadge--empty"
+            self.badge.setProperty("class", clase)
+            self.badge.style().unpolish(self.badge)
+            self.badge.style().polish(self.badge)
+            self.editor.hide()
+            self.badge.show()
+            self.changed.emit()
+        finally:
+            self._confirming = False
 
     def eventFilter(self, obj, event):
         if obj is self.editor and event.type() == QEvent.Type.FocusOut:
-            QTimer.singleShot(0, self._confirm)
+            QTimer.singleShot(0, self._safe_confirm)
         return super().eventFilter(obj, event)
+
+    def _safe_confirm(self):
+        try:
+            if self._destroyed or not self.editor or not self.editor.isVisible():
+                return
+            self._confirm()
+        except RuntimeError:
+            pass
+
+    def closeEvent(self, event):
+        self._destroyed = True
+        super().closeEvent(event)
 
 class MacroRow(QFrame):
     delete_requested = Signal(int)
+    executed = Signal(dict)
 
     def __init__(self, macro):
         super().__init__()
         self.macro_id = macro["id"]
         self.macro_data = macro
         self.setFixedHeight(38)
+        self.setProperty("class", "MacroRow")
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 0, 8, 0)
@@ -134,12 +163,13 @@ class MacroRow(QFrame):
         tipo_icon.setFixedWidth(18)
         tipo_icon.setProperty("class", "TypeIcon")
 
-        self.lbl_nombre = QLabel(macro["name"])
+        self.lbl_nombre = ClickableLabel(macro["name"])
         self.lbl_nombre.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.lbl_nombre.setProperty("class", "MacroRowLabel")
         self.lbl_nombre.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.lbl_nombre.clicked.connect(lambda: self.executed.emit(self.macro_data))
 
-        badge = HotkeyBadge(macro["id"], macro["hotkey"])
+        self.badge = HotkeyBadge(macro["id"], macro["hotkey"])
 
         btn_delete = QPushButton("✕")
         btn_delete.setFixedSize(22, 22)
@@ -149,28 +179,13 @@ class MacroRow(QFrame):
 
         layout.addWidget(tipo_icon)
         layout.addWidget(self.lbl_nombre)
-        layout.addWidget(badge)
+        layout.addWidget(self.badge)
         layout.addWidget(btn_delete)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Solo ejecutar si el click no fue en el badge ni en delete
-            child = self.childAt(event.position().toPoint())
-            if child is self.lbl_nombre or child is None:
-                self._ejecutar()
-        super().mousePressEvent(event)
-
-    def _ejecutar(self):
-        # Señal hacia MacrosPanel via parent
-        parent = self.parent()
-        while parent and not isinstance(parent, MacrosPanel):
-            parent = parent.parent()
-        if parent:
-            parent._ejecutar(self.macro_data)
 
 
 class MacrosPanel(QWidget):
     macro_triggered = Signal(str)
+    macros_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -269,7 +284,7 @@ class MacrosPanel(QWidget):
             self.input_contenido.setPlaceholderText("Escribe el texto a pegar...")
         else:
             self.lbl_tipo_desc.setText("El contenido se ejecutará como comando de sistema.")
-            self.input_contenido.setPlaceholderText("Ej: notepad.exe  /  python script.py")
+            self.input_contenido.setPlaceholderText("Ej: notepad.exe  /  start chrome https://www.youtube.com/")
 
     def _guardar_macro(self):
         nombre = self.input_nombre.text().strip()
@@ -280,6 +295,7 @@ class MacrosPanel(QWidget):
         self.input_nombre.clear()
         self.input_contenido.clear()
         self._cargar_macros()
+        self.macros_changed.emit()
 
     def _cargar_macros(self):
         while self._lista_layout.count() > 1:
@@ -298,14 +314,20 @@ class MacrosPanel(QWidget):
         for macro in macros:
             row = MacroRow(macro)
             row.delete_requested.connect(self._eliminar)
+            row.executed.connect(self._ejecutar)
+            row.badge.changed.connect(self.macros_changed.emit)
             self._lista_layout.insertWidget(self._lista_layout.count() - 1, row)
 
     def _ejecutar(self, macro):
         if macro["type"] == "text":
             self.macro_triggered.emit(macro["content"])
         else:
-            subprocess.Popen(macro["content"], shell=True)
+            try:
+                subprocess.Popen(macro["content"], shell=True)
+            except Exception as e:
+                print(f"Error ejecutando macro shell: {e}")
 
     def _eliminar(self, macro_id):
         delete_macro(macro_id)
         QTimer.singleShot(0, self._cargar_macros)
+        self.macros_changed.emit()

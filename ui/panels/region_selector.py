@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import QWidget, QApplication
 from PySide6.QtCore import Qt, QRect, QPoint, Signal
-from PySide6.QtGui import QPainter, QColor, QPen
+from PySide6.QtGui import QPainter, QColor, QPen, QCursor
 
 class RegionSelector(QWidget):
-    region_selected = Signal(int, int, int, int)  # x, y, w, h
+    region_selected = Signal(int, int, int, int)  # x, y, w, h (physical global coords)
 
     def __init__(self):
         super().__init__()
@@ -19,8 +19,17 @@ class RegionSelector(QWidget):
         self.selection = QRect()
         self.is_dragging = False
 
-        self._screenshot = QApplication.primaryScreen().grabWindow(0)
+        # Usar la pantalla donde está el cursor
+        screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+        self._dpr = screen.devicePixelRatio()
+        # Offset lógico de esta pantalla en el escritorio virtual (para multi-monitor)
+        self._screen_offset = screen.geometry().topLeft()
 
+        self._screenshot = screen.grabWindow(0)
+        self._screenshot.setDevicePixelRatio(self._dpr)
+
+        # Mover la ventana a la pantalla correcta antes de showFullScreen
+        self.move(screen.geometry().topLeft())
         self.showFullScreen()
 
     def paintEvent(self, event):
@@ -49,11 +58,13 @@ class RegionSelector(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = False
             if self.selection.width() > 0 and self.selection.height() > 0:
+                # Coordenadas locales + offset de pantalla = globales lógicas
+                # Globales lógicas * DPR = globales físicas (lo que necesita PIL)
                 self.region_selected.emit(
-                    self.selection.x(),
-                    self.selection.y(),
-                    self.selection.width(),
-                    self.selection.height()
+                    int((self.selection.x() + self._screen_offset.x()) * self._dpr),
+                    int((self.selection.y() + self._screen_offset.y()) * self._dpr),
+                    int(self.selection.width() * self._dpr),
+                    int(self.selection.height() * self._dpr)
                 )
             self.close()
 

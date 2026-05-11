@@ -1,8 +1,5 @@
-from asyncio.windows_events import NULL
-
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QScrollArea
 from PySide6.QtCore import Qt, Signal
-from sympy.parsing.sympy_parser import null
 
 from data.database import get_all_conversations
 
@@ -93,7 +90,7 @@ class HistoryPanel(QWidget):
             btn.setProperty("class", "TaskItem")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(lambda _, cid=conv["id"]: self.conversation_selected.emit(cid))
-            self.lista_layout.insertWidget(self.lista_layout.count() - 1, btn)
+            self._lista_layout.insertWidget(self._lista_layout.count() - 1, btn)
 
     def _mes_anterior(self):
         if self._mes_idx < len(self._meses) - 1:

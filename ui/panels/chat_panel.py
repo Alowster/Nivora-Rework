@@ -48,6 +48,9 @@ class ChatPanel(QWidget):
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         main_layout.addWidget(self.scroll_area)
 
+        self._auto_scroll = True
+        self.scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
+
         input_container = QHBoxLayout()
         input_container.setSpacing(10)
 
@@ -106,6 +109,15 @@ class ChatPanel(QWidget):
         self.ocr_context = texto
         self.input_field.setFocus()
 
+    def _on_scroll_changed(self, value):
+        sb = self.scroll_area.verticalScrollBar()
+        self._auto_scroll = value >= sb.maximum() - 30
+
+    def _scroll_to_bottom(self):
+        if self._auto_scroll:
+            sb = self.scroll_area.verticalScrollBar()
+            sb.setValue(sb.maximum())
+
     def _create_ai_bubble(self):
         bubble = QTextEdit()
         bubble.setReadOnly(True)
@@ -124,3 +136,172 @@ class ChatPanel(QWidget):
         doc_height = int(bubble.document().size().height())
         bubble.setFixedHeight(doc_height + 20)
 
+    def enviar_mensaje(self):
+        texto = self.input_field.text().strip()
+        if not texto:
+            return
+        self._auto_scroll = True
+        if self.conversation_id is None:
+            self.conversation_id = create_conversation()
+            rename_conversation(self.conversation_id, texto[:45] + "..." if len(texto) > 45 else texto)
+            self._actualizar_nombre()
+        has_capture = bool(self.ocr_context)
+        add_message(self.conversation_id, "user", texto)
+        self.add_bubble(texto, "user", has_capture=has_capture)
+        self.input_field.clear()
+        self.input_field.setEnabled(False)
+
+        self.current_response = ""
+        self.ai_bubble = self._create_ai_bubble()
+        self.messages_layout.addWidget(self.ai_bubble, alignment=Qt.AlignLeft)
+
+        historial = get_messages(self.conversation_id)
+        if self.ocr_context:
+            system_msg = {"role": "system", "content": f"El usuario ha capturado esta región de pantalla. Texto extraído:\n---\n{self.ocr_context}\n---"}
+            historial = [system_msg] + historial
+            self.ocr_context = None
+        self.worker = AIService(historial)
+        self.worker.chunk_received.connect(self.on_chunk)
+        self.worker.completed.connect(self.on_finished)
+        self.worker.error.connect(self.on_error)
+        self.btn_stop.setVisible(True)
+        self.btn_enviar.setVisible(False)
+        self.worker.start()
+
+    def detener_generacion(self):
+        self._render_timer.stop()
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            self.worker.stop()
+        if hasattr(self, 'current_response') and self.current_response:
+            add_message(self.conversation_id, "assistant", self.current_response)
+            html = md.markdown(self.current_response, extensions=["fenced_code", "tables"])
+            self.ai_bubble.setHtml(f'<div style="color:white;">{html}</div>')
+            self._update_bubble_height(self.ai_bubble)
+        self.btn_stop.setVisible(False)
+        self.btn_enviar.setVisible(True)
+        self.input_field.setEnabled(True)
+        self.input_field.setFocus()
+
+    def add_bubble(self, text, role, has_capture=False):
+        bubble = QLabel(text)
+        bubble.setWordWrap(True)
+        bubble.setFixedWidth(220)
+        bubble.setContentsMargins(12, 8, 12, 8)
+        bubble.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse |
+            Qt.TextInteractionFlag.TextSelectableByKeyboard
+        )
+        if role == "user":
+            bubble.setStyleSheet("background-color: rgba(123, 104, 238, 0.18); border: 1px solid rgba(123, 104, 238, 0.25); border-radius: 12px; color: rgba(255, 255, 255, 0.90); font-size: 13px;")
+        else:
+            bubble.setStyleSheet("background-color: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; color: rgba(255, 255, 255, 0.80); font-size: 13px;")
+
+        if role == "user" and has_capture:
+            from PySide6.QtWidgets import QHBoxLayout, QWidget as _W
+            row = _W()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(6)
+
+            badge = QLabel("📷")
+            badge.setFixedSize(24, 24)
+            badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            badge.setStyleSheet(
+                "background-color: rgba(123,104,238,0.30);"
+                "border: 1px solid rgba(123,104,238,0.50);"
+                "border-radius: 8px;"
+                "font-size: 13px;"
+            )
+            row_layout.addStretch()
+            row_layout.addWidget(badge)
+            row_layout.addWidget(bubble)
+            self.messages_layout.addWidget(row, alignment=Qt.AlignmentFlag.AlignRight)
+        elif role == "user":
+            self.messages_layout.addWidget(bubble, alignment=Qt.AlignmentFlag.AlignRight)
+        else:
+            self.messages_layout.addWidget(bubble, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        h = bubble.heightForWidth(220)
+        if h > 0:
+            bubble.setFixedHeight(h)
+
+        self._scroll_to_bottom()
+
+    def load_conversation(self, conversation_id):
+        self._render_timer.stop()
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            self.worker.completed.disconnect()
+            self.worker.chunk_received.disconnect()
+            self.worker.error.disconnect()
+            self.worker.stop()
+        self.btn_stop.setVisible(False)
+        self.btn_enviar.setVisible(True)
+        self.input_field.setEnabled(True)
+
+        self.conversation_id = conversation_id
+        self._actualizar_nombre()
+
+        while self.messages_layout.count():
+            item = self.messages_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        for msg in get_messages(conversation_id):
+            if msg["role"] == "user":
+                self.add_bubble(msg["content"], "user")
+            else:
+                bubble = self._create_ai_bubble()
+                html = md.markdown(msg["content"], extensions=["fenced_code", "tables"])
+                bubble.setHtml(f'<div style="color:white;">{html}</div>')
+                self.messages_layout.addWidget(bubble, alignment=Qt.AlignLeft)
+                self._update_bubble_height(bubble)
+
+    def nueva_conversacion(self):
+        self._render_timer.stop()
+        if hasattr(self, 'worker') and self.worker.isRunning():
+            self.worker.completed.disconnect()
+            self.worker.chunk_received.disconnect()
+            self.worker.error.disconnect()
+            self.worker.stop()
+        self.btn_stop.setVisible(False)
+        self.btn_enviar.setVisible(True)
+        self.input_field.setEnabled(True)
+        self.conversation_id = None
+        self._actualizar_nombre()
+        while self.messages_layout.count():
+            item = self.messages_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    def _flush_render(self):
+        if self._pending_render:
+            self.ai_bubble.setPlainText(self.current_response)
+            self._update_bubble_height(self.ai_bubble)
+            self._scroll_to_bottom()
+            self._pending_render = False
+        else:
+            self._render_timer.stop()
+
+    def on_chunk(self, text):
+        self.current_response += text
+        self._pending_render = True
+        if not self._render_timer.isActive():
+            self._render_timer.start()
+
+    def on_finished(self):
+        self._render_timer.stop()
+        add_message(self.conversation_id, "assistant", self.current_response)
+        html = md.markdown(self.current_response, extensions=["fenced_code", "tables"])
+        self.ai_bubble.setHtml(f'<div style="color:white;">{html}</div>')
+        self._update_bubble_height(self.ai_bubble)
+        self.btn_stop.setVisible(False)
+        self.btn_enviar.setVisible(True)
+        self.input_field.setEnabled(True)
+        self.input_field.setFocus()
+
+    def on_error(self, error_msg):
+        self.ai_bubble.setPlainText(f"Error: {error_msg}")
+        self._update_bubble_height(self.ai_bubble)
+        self.btn_stop.setVisible(False)
+        self.btn_enviar.setVisible(True)
+        self.input_field.setEnabled(True)

@@ -1,0 +1,459 @@
+/* =============================================================
+   styles.qss — Nivora · glassmorphism
+   =============================================================
+
+   TOKENS
+     glass:        rgba(255,255,255, 0.05-0.06)
+     glass-hover:  rgba(255,255,255, 0.09-0.11)
+     glass-form:   rgba(255,255,255, 0.14)
+     accent:       rgba(123,104,238, ...)
+     border-dim:   rgba(255,255,255, 0.08-0.11)
+     border-form:  rgba(255,255,255, 0.22)
+
+   SELECTORES
+     .IslandPill / .PopupPanel / QMenu
+     .GradientButton / .OutlineButton / .MenuButton
+     .NavButton / QPushButton / .AddButton  → acento compartido
+     .PanelItem / .ConvButton / .TaskItem / .MacroItem → base compartida
+     QTextEdit#AIBubble / QLabel#MsgAI     → base compartida
+     .GlassInput / .GlassTextEdit          → base compartida
+     MacroRow / .HotkeyBadge / .ToggleButton / .DeleteButton
+     .StatusDot / QLineEdit / QScrollBar / QToolTip
+   ============================================================= */
+
+
+/* =============================================================
+   TRANSPARENTES
+   ============================================================= */
+
+ChatPopup,
+QScrollArea,
+QScrollArea > QWidget {
+    background: transparent;
+    border: none;
+}
+
+
+/* =============================================================
+   CONTENEDORES
+   ============================================================= */
+
+.IslandPill {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 40px;
+}
+
+.PopupPanel {
+    background-color: rgba(18, 18, 30, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 20px;
+}
+
+QMenu {
+    background-color: rgba(14, 14, 24, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 14px;
+    padding: 5px;
+}
+
+QMenu::item {
+    color: rgba(255, 255, 255, 0.72);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+QMenu::item:selected {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+QMenu::separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.07);
+    margin: 4px 10px;
+}
+
+
+/* =============================================================
+   BOTONES — acento compartido
+   ============================================================= */
+
+/* Base de radio: los tres tipos de botón isla */
+.GradientButton,
+.OutlineButton,
+.MenuButton {
+    border-radius: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+}
+
+/* Color de acento compartido por todos los botones primarios */
+.GradientButton,
+.NavButton,
+QPushButton,
+.AddButton {
+    background-color: rgba(123, 104, 238, 0.40);
+    border: 1px solid rgba(123, 104, 238, 0.70);
+}
+
+.GradientButton:hover,
+.NavButton:hover,
+QPushButton:hover,
+.AddButton:hover {
+    background-color: rgba(123, 104, 238, 0.55);
+    border-color: rgba(123, 104, 238, 0.85);
+}
+
+.GradientButton:pressed,
+.NavButton:pressed,
+QPushButton:pressed,
+.AddButton:pressed {
+    background-color: rgba(123, 104, 238, 0.28);
+}
+
+/* Radios individuales */
+QPushButton  { border-radius: 20px; }
+.AddButton   { border-radius: 8px; }
+
+/* NavButton — dimensiones propias */
+.NavButton {
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.90);
+    font-size: 14px;
+    font-weight: bold;
+    max-height: 22px;
+    max-width: 28px;
+    padding: 0px 10px 3px 10px;
+}
+
+.NavButton:disabled {
+    background-color: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* OutlineButton — glass secundario */
+.OutlineButton {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.11);
+}
+
+.OutlineButton:hover {
+    background-color: rgba(255, 255, 255, 0.11);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.OutlineButton:pressed {
+    background-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.30);
+}
+
+/* MenuButton — ghost ⋮ */
+.MenuButton {
+    background-color: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.38);
+    font-size: 22px;
+    font-weight: bold;
+    padding-bottom: 4px;
+}
+
+.MenuButton:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 22px;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.MenuButton:pressed {
+    background-color: rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 1.0);
+}
+
+
+/* =============================================================
+   ITEMS DE PANEL — base glass compartida
+   ============================================================= */
+
+.PanelItem,
+.ConvButton,
+.TaskItem,
+.MacroItem {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    font-size: 13px;
+    padding: 9px 13px;
+    text-align: left;
+}
+
+.PanelItem,
+.ConvButton {
+    color: rgba(255, 255, 255, 0.75);
+    padding: 8px 13px;
+}
+
+.TaskItem,
+.MacroItem {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.PanelItem:hover,
+.ConvButton:hover,
+.TaskItem:hover,
+.MacroItem:hover {
+    background-color: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.PanelItem:pressed,
+.ConvButton:pressed {
+    background-color: rgba(123, 104, 238, 0.14);
+    border-color: rgba(123, 104, 238, 0.28);
+}
+
+.MacroItem:pressed {
+    background-color: rgba(123, 104, 238, 0.14);
+    border-color: rgba(123, 104, 238, 0.28);
+}
+
+.TaskItem:checked {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.32);
+}
+
+
+/* =============================================================
+   BURBUJAS DE CHAT — base compartida AI
+   ============================================================= */
+
+QTextEdit#AIBubble,
+QLabel#MsgAI {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 13px;
+}
+
+QLabel#MsgUser {
+    background-color: rgba(123, 104, 238, 0.18);
+    border: 1px solid rgba(123, 104, 238, 0.25);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.90);
+    font-size: 13px;
+}
+
+QTextEdit#AIBubble QScrollBar:horizontal { height: 6px; background: transparent; }
+QTextEdit#AIBubble QScrollBar::handle:horizontal { background: rgba(255, 255, 255, 60); border-radius: 3px; }
+QTextEdit#AIBubble QScrollBar::add-line:horizontal,
+QTextEdit#AIBubble QScrollBar::sub-line:horizontal { width: 0px; }
+
+
+/* =============================================================
+   CONTROLES
+   ============================================================= */
+
+QLineEdit {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 13px;
+    padding-left: 15px;
+    selection-background-color: rgba(123, 104, 238, 0.40);
+}
+
+QLineEdit:focus {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(123, 104, 238, 0.50);
+}
+
+/* HotkeyBadge */
+.HotkeyBadge,
+.HotkeyBadge--empty {
+    border-radius: 6px;
+    font-size: 11px;
+    padding: 2px 6px;
+}
+
+.HotkeyBadge {
+    background-color: rgba(123, 104, 238, 0.20);
+    border: 1px solid rgba(123, 104, 238, 0.40);
+    color: rgba(255, 255, 255, 0.80);
+}
+
+.HotkeyBadge:hover {
+    background-color: rgba(123, 104, 238, 0.35);
+    border-color: rgba(123, 104, 238, 0.60);
+}
+
+.HotkeyBadge--empty {
+    background-color: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.20);
+    color: rgba(255, 255, 255, 0.30);
+}
+
+.HotkeyBadge--empty:hover {
+    border-color: rgba(255, 255, 255, 0.40);
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* StatusDot */
+.StatusDot {
+    background-color: rgba(255, 255, 255, 0.30);
+    border-radius: 4px;
+    min-width: 8px;  min-height: 8px;
+    max-width: 8px;  max-height: 8px;
+}
+
+.StatusDot--active { background-color: rgba(29,  158, 117, 0.90); }
+.StatusDot--busy   { background-color: rgba(239, 159,  39, 0.90); }
+.StatusDot--error  { background-color: rgba(226,  75,  74, 0.90); }
+
+
+/* =============================================================
+   MACROS — componentes del panel
+   ============================================================= */
+
+MacroRow {
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+}
+
+MacroRow:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.26);
+}
+
+.MacroRowLabel {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 13px;
+}
+
+.TypeIcon    { font-size: 12px; }
+
+.SectionLabel {
+    color: rgba(255, 255, 255, 0.50);
+    font-size: 11px;
+}
+
+.DescLabel {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
+}
+
+.EmptyLabel {
+    color: rgba(255, 255, 255, 0.25);
+    font-size: 12px;
+}
+
+.DeleteButton {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.30);
+    font-size: 12px;
+    padding: 0;
+}
+
+.DeleteButton:hover {
+    background: rgba(220, 60, 60, 0.15);
+    color: rgba(220, 60, 60, 0.90);
+}
+
+/* GlassInput / GlassTextEdit — base compartida */
+.GlassInput,
+.GlassTextEdit {
+    background-color: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 8px;
+    color: white;
+}
+
+.GlassInput:focus,
+.GlassTextEdit:focus {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(123, 104, 238, 0.65);
+}
+
+.GlassInput    { padding-left: 10px; }
+.GlassTextEdit { padding: 6px 10px; }
+
+.HSeparator {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: none;
+    max-height: 1px;
+}
+
+/* ToggleButton */
+.ToggleButton {
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 12px;
+}
+
+.ToggleButton:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.30);
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.ToggleButton:checked {
+    background-color: rgba(123, 104, 238, 0.40);
+    border-color: rgba(123, 104, 238, 0.70);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+
+/* =============================================================
+   SCROLLBAR
+   ============================================================= */
+
+QScrollBar:vertical,
+QScrollBar:horizontal {
+    background: transparent;
+    border-radius: 2px;
+}
+
+QScrollBar:vertical   { width: 4px;  margin: 4px 2px; }
+QScrollBar:horizontal { height: 4px; margin: 2px 4px; }
+
+QScrollBar::handle:vertical,
+QScrollBar::handle:horizontal {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 2px;
+}
+
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+QScrollBar::handle:vertical   { min-height: 24px; }
+QScrollBar::handle:horizontal { min-width:  24px; }
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical  { height: 0px; }
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal { width: 0px; }
+
+
+/* =============================================================
+   TOOLTIP
+   ============================================================= */
+
+QToolTip {
+    background-color: rgba(14, 14, 24, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.80);
+    font-size: 12px;
+    padding: 5px 10px;
+}
