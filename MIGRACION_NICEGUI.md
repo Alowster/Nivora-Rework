@@ -95,8 +95,24 @@ class HotkeyManager:
         self._handles = []
 
     def reload(self):
-        # misma lógica keyboard.add_hotkey
-        ...
+        try:
+            self._unregister_all()
+            for macro in get_all_macros():
+                hotkey = (macro.get("hotkey") or "").strip()
+                if not hotkey:
+                    continue
+                try:
+                    handle = keyboard.add_hotkey(
+                        hotkey,
+                        self._make_callback(macro),
+                        suppress=True,
+                    )
+                    self._handles.append(handle)
+                except Exception as e:
+                    print(f"Error registrando {hotkey}: {e}")
+        except Exception as e:
+            # Importante: keyboard requiere permisos de Admin en Windows
+            print(f"Error crítico en HotkeyManager (¿faltan permisos de Admin?): {e}")
 ```
 
 ### Paso 3 — Selector de región (overlay Tkinter)
@@ -136,8 +152,10 @@ def select_region(callback):
         def on_release(e):
             x1, y1 = min(start["x"], e.x_root), min(start["y"], e.y_root)
             x2, y2 = max(start["x"], e.x_root), max(start["y"], e.y_root)
+            root.quit() # Salir del mainloop de forma segura
             root.destroy()
             if x2 - x1 > 5 and y2 - y1 > 5:
+                # El callback debe ser rápido o usar ui.run_javascript / app.queue_btn
                 callback(x1, y1, x2 - x1, y2 - y1)
 
         canvas.bind("<ButtonPress-1>", on_press)
@@ -186,7 +204,7 @@ def index():
         with ui.tab_panel(macros_tab):
             macros_page(hotkey_manager)
 
-ui.run(title='Nivora', dark=True, port=8080, reload=False)
+ui.run(title='Nivora', dark=True, port=8080, reload=False, storage_secret='nivora_secret_key_123')
 ```
 
 ### Paso 5 — `ui/chat_page.py`
