@@ -44,8 +44,7 @@ GRADIENT_COLORS_PRESSED = {
 }
 
 # IA
-OLLAMA_MODEL = "gemma3:4b"
-OLLAMA_MAX_TOKENS = 50000
+GEMINI_MODEL = "models/gemini-3.1-flash-lite"
 
 # Archivos de recursos
 STYLES_FILE = "assets/styles.qss"

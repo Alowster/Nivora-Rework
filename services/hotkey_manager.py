@@ -3,32 +3,23 @@ from __future__ import annotations
 import logging
 import time
 import threading
-
-from PySide6.QtCore import QObject, Signal
+from typing import Callable
 
 import keyboard
 
 from data.database import get_all_macros
-
 
 log = logging.getLogger(__name__)
 
 _FOCUS_DELAY = 0.15
 
 
-class HotkeyManager(QObject):
-    """Registra las hotkeys globales definidas en la DB de macros.
+class HotkeyManager:
+    """Registra hotkeys globales definidas en la DB de macros (sin dependencias Qt)."""
 
-    Las macros de tipo 'text' escriben en la app activa con keyboard.write().
-    Las de tipo 'shell' emiten shell_requested para que el panel las ejecute.
-    """
-
-    shell_requested = Signal(dict)
-    macro_triggered = Signal(str)  # compatibilidad con conexiones externas
-
-    def __init__(self):
-        super().__init__()
-        self._handles = []
+    def __init__(self, on_shell_macro: Callable[[dict], None] | None = None):
+        self._on_shell_macro = on_shell_macro or (lambda m: None)
+        self._handles: list = []
 
     def reload(self):
         self._unregister_all()
@@ -46,20 +37,20 @@ class HotkeyManager(QObject):
             except Exception as e:
                 log.warning("No se pudo registrar hotkey %r: %s", hotkey, e)
 
-    def _make_callback(self, macro):
+    def _make_callback(self, macro: dict) -> Callable:
         if macro["type"] == "text":
             content = macro["content"]
 
-            def _write_to_active_app():
+            def _write():
                 time.sleep(_FOCUS_DELAY)
                 try:
                     keyboard.write(content, delay=0.01)
                 except Exception as e:
                     log.warning("Error al escribir texto de macro: %s", e)
 
-            return lambda: threading.Thread(target=_write_to_active_app, daemon=True).start()
+            return lambda: threading.Thread(target=_write, daemon=True).start()
         else:
-            return lambda: self.shell_requested.emit(macro)
+            return lambda: self._on_shell_macro(macro)
 
     def _unregister_all(self):
         for h in self._handles:
