@@ -53,17 +53,24 @@ config.py                ← reducido
 ### Paso 1 — Preparar el entorno
 
 ```
-pip install nicegui pywebview google-generativeai pillow keyboard
+pip install nicegui pywebview google-generativeai pillow keyboard python-dotenv
 pip uninstall PySide6 markdown ollama
 ```
 
 `pywebview` es el componente que hace que NiceGUI abra una ventana de escritorio real en vez de un navegador.
 
-Configurar la API key de Gemini (una sola vez):
+**Configurar la API key** — crear el archivo `.env` en la raíz del proyecto:
 
-```powershell
-# Windows — permanente para el usuario actual
-[System.Environment]::SetEnvironmentVariable("GEMINI_API_KEY", "tu_key_aqui", "User")
+```
+# .env
+GEMINI_API_KEY=tu_key_aqui
+```
+
+Añadir `.env` al `.gitignore` para que nunca se suba al repositorio:
+
+```
+# .gitignore
+.env
 ```
 
 ### Paso 2 — Refactorizar servicios (quitar Qt)
@@ -74,13 +81,16 @@ Configurar la API key de Gemini (una sola vez):
 import os, base64, asyncio
 from pathlib import Path
 from typing import AsyncGenerator
+from dotenv import load_dotenv
 import google.generativeai as genai
 from config import GEMINI_MODEL
+
+load_dotenv()
 
 def _init_model():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise ValueError("Falta variable de entorno GEMINI_API_KEY")
+        raise ValueError("Falta GEMINI_API_KEY en el archivo .env")
     genai.configure(api_key=api_key)
     return genai.GenerativeModel(GEMINI_MODEL)
 
@@ -289,6 +299,7 @@ pywebview
 google-generativeai
 pillow
 keyboard
+python-dotenv
 ```
 
 ---
@@ -316,7 +327,7 @@ keyboard
 - Enviar mensaje de texto → respuesta de Gemini en streaming token a token
 - Adjuntar captura de pantalla → Gemini describe su contenido
 - Adjuntar PDF → Gemini resume el documento
-- Sin `GEMINI_API_KEY` en env → error claro al intentar enviar
+- Sin `GEMINI_API_KEY` en `.env` → error claro al intentar enviar
 - Capturar región → imagen enviada a Gemini → Gemini describe / extrae el texto directamente
 - Crear macro tipo `shell` + hotkey → ejecutar fuera de la ventana
 - Crear macro tipo `text` → hotkey escribe el texto en la app activa
