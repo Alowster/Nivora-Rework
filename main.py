@@ -62,7 +62,7 @@ def index():
 
     app_state = {"panel": "chat", "win": "open", "menu_open": False}
 
-    # ── Reopen pill (visible cuando está cerrado ) ──────────────────────────────
+    # ── Reopen pill (visible cuando está cerrado) ──────────────────────────────
     reopen_el = ui.element("div").classes("reopen glass").style("display:none;cursor:pointer;")
     with reopen_el:
         ui.html(_I_SPARK)
