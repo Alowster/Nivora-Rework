@@ -167,6 +167,11 @@ class IslandWindow(QWidget):
         painter.drawPath(inner_path)
 
 
+    def hideEvent(self, event):
+        self.popup.hide()
+        self.settings.hide()
+        super().hideEvent(event)
+
     def mousePressEvent(self, event):
         """Permite arrastrar la ventana"""
         if event.button() == Qt.LeftButton:
