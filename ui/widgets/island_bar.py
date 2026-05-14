@@ -52,9 +52,10 @@ class IslandWindow(QWidget):
         self.main_layout = main_layout
 
         # Crear botones con iconos
-        self.button1 = create_icon_button(icons.get_chat_icon(), "GradientButton", "chat", self.on_button_clicked)
-        self.button2 = create_icon_button(icons.get_clock_icon(), "OutlineButton", "lista", self.on_button_clicked)
-        self.button3 = create_icon_button(icons.get_sparkles_icon(), "OutlineButton", "macros", self.on_button_clicked)
+        self._icon_svgs = [icons.get_chat_icon(), icons.get_clock_icon(), icons.get_sparkles_icon()]
+        self.button1 = create_icon_button(self._icon_svgs[0], "GradientButton", "chat", self.on_button_clicked)
+        self.button2 = create_icon_button(self._icon_svgs[1], "OutlineButton", "lista", self.on_button_clicked)
+        self.button3 = create_icon_button(self._icon_svgs[2], "OutlineButton", "macros", self.on_button_clicked)
 
         main_layout.addWidget(self.button1)
         main_layout.addWidget(self.button2)
@@ -73,6 +74,18 @@ class IslandWindow(QWidget):
         # Panel popup compartido y contenidos
         self.popup = PopupPanel()
         self.settings = SettingsWindow()
+        self.settings.opacity_changed.connect(self._apply_opacity)
+        self.settings.scale_changed.connect(self._apply_scale)
+
+        # Valores base para el escalado
+        self._base_window_width = config.WINDOW_WIDTH
+        self._base_window_height = config.WINDOW_HEIGHT
+        self._base_button_size = config.BUTTON_SIZE
+        self._base_icon_size = config.ICON_SIZE
+        self._base_menu_button_width = config.MENU_BUTTON_WIDTH
+        self._base_margin_h = config.LAYOUT_MARGIN_HORIZONTAL
+        self._base_margin_v = config.LAYOUT_MARGIN_VERTICAL
+        self._base_spacing = config.BUTTON_SPACING
         self.chat_content = ChatPanel()
         self.lista_content = HistoryPanel()
         self.macros_content = MacrosPanel()
@@ -217,3 +230,36 @@ class IslandWindow(QWidget):
         self.chat_content.load_conversation(conv_id)
         self.popup.set_content(self.chat_content)
         self.chat_content.focus_input()
+
+    def _apply_opacity(self, value: float):
+        self.setWindowOpacity(value)
+        self.popup.setWindowOpacity(value)
+        self.settings.setWindowOpacity(value)
+
+    def _apply_scale(self, scale: float):
+        new_w = int(self._base_window_width * scale)
+        new_h = int(self._base_window_height * scale)
+        btn_size = int(self._base_button_size * scale)
+        icon_size = int(self._base_icon_size * scale)
+        menu_w = int(self._base_menu_button_width * scale)
+        btn_radius = btn_size // 2
+        menu_radius = int(22 * scale)
+        margin_h = int(self._base_margin_h * scale)
+        margin_v = int(self._base_margin_v * scale)
+        spacing = int(self._base_spacing * scale)
+
+        self.setFixedSize(new_w, new_h)
+        self.main_layout.setContentsMargins(margin_h, margin_v, margin_h, margin_v)
+        self.main_layout.setSpacing(spacing)
+
+        from PySide6.QtCore import QSize
+        for btn, svg in zip((self.button1, self.button2, self.button3), self._icon_svgs):
+            btn.setFixedSize(btn_size, btn_size)
+            btn.setIcon(create_svg_icon(svg, icon_size))
+            btn.setIconSize(QSize(icon_size, icon_size))
+            btn.setStyleSheet(f"border-radius: {btn_radius}px;")
+
+        self.menu_button.setFixedSize(menu_w, btn_size)
+        self.menu_button.setStyleSheet(f"border-radius: {menu_radius}px;")
+
+        self.center_window()

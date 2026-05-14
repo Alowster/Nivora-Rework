@@ -446,6 +446,47 @@ QScrollBar::sub-line:horizontal { width: 0px; }
 
 
 /* =============================================================
+   SETTINGS WINDOW
+   ============================================================= */
+
+.SettingsDesc {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11px;
+}
+
+.SettingsValue {
+    color: rgba(255, 255, 255, 0.40);
+    font-size: 10px;
+}
+
+QSlider.SettingsSlider::groove:horizontal {
+    background: rgba(255, 255, 255, 0.10);
+    border: none;
+    border-radius: 3px;
+    height: 5px;
+}
+
+QSlider.SettingsSlider::sub-page:horizontal {
+    background: rgba(123, 104, 238, 0.70);
+    border-radius: 3px;
+    height: 5px;
+}
+
+QSlider.SettingsSlider::handle:horizontal {
+    background: rgba(200, 190, 255, 0.90);
+    border: none;
+    border-radius: 7px;
+    height: 14px;
+    margin: -5px 0;
+    width: 14px;
+}
+
+QSlider.SettingsSlider::handle:horizontal:hover {
+    background: rgba(255, 255, 255, 1.0);
+}
+
+
+/* =============================================================
    TOOLTIP
    ============================================================= */
 

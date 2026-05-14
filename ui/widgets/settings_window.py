@@ -1,11 +1,15 @@
 import config
 
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QApplication
-from PySide6.QtCore import Qt, QEvent
+from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
+                               QApplication, QSlider)
+from PySide6.QtCore import Qt, QEvent, Signal
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen, QPainterPath
 
 
 class SettingsWindow(QFrame):
+    opacity_changed = Signal(float)   # 0.0 – 1.0
+    scale_changed = Signal(float)     # factor, e.g. 0.7 – 1.5
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(
@@ -16,19 +20,82 @@ class SettingsWindow(QFrame):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setFixedSize(200, 400)
+        self.setFixedSize(230, 210)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setContentsMargins(18, 16, 18, 18)
+        layout.setSpacing(0)
 
-        lbl = QLabel("Ajustes")
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl.setProperty("class", "SectionLabel")
-        layout.addWidget(lbl)
+        title = QLabel("Ajustes")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setProperty("class", "SectionLabel")
+        layout.addWidget(title)
+
+        layout.addSpacing(16)
+
+        # ── Opacidad ──────────────────────────────────────────────
+        opacity_desc = QLabel("Opacidad de la ventana")
+        opacity_desc.setProperty("class", "SettingsDesc")
+        layout.addWidget(opacity_desc)
+
+        layout.addSpacing(6)
+
+        opacity_row = QHBoxLayout()
+        opacity_row.setSpacing(8)
+
+        self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.opacity_slider.setRange(20, 100)
+        self.opacity_slider.setValue(100)
+        self.opacity_slider.setProperty("class", "SettingsSlider")
+        opacity_row.addWidget(self.opacity_slider)
+
+        self._opacity_val = QLabel("100%")
+        self._opacity_val.setFixedWidth(34)
+        self._opacity_val.setProperty("class", "SettingsValue")
+        opacity_row.addWidget(self._opacity_val)
+
+        layout.addLayout(opacity_row)
+
+        layout.addSpacing(20)
+
+        # ── Tamaño UI ─────────────────────────────────────────────
+        size_desc = QLabel("Tamaño de la interfaz")
+        size_desc.setProperty("class", "SettingsDesc")
+        layout.addWidget(size_desc)
+
+        layout.addSpacing(6)
+
+        size_row = QHBoxLayout()
+        size_row.setSpacing(8)
+
+        self.size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.size_slider.setRange(70, 150)
+        self.size_slider.setValue(100)
+        self.size_slider.setProperty("class", "SettingsSlider")
+        size_row.addWidget(self.size_slider)
+
+        self._size_val = QLabel("100%")
+        self._size_val.setFixedWidth(34)
+        self._size_val.setProperty("class", "SettingsValue")
+        size_row.addWidget(self._size_val)
+
+        layout.addLayout(size_row)
+
         layout.addStretch()
+
+        self.opacity_slider.valueChanged.connect(self._on_opacity_changed)
+        self.size_slider.valueChanged.connect(self._on_scale_changed)
 
         QApplication.instance().focusWindowChanged.connect(self._on_focus_changed)
         QApplication.instance().installEventFilter(self)
+
+    def _on_opacity_changed(self, value):
+        self._opacity_val.setText(f"{value}%")
+        self.opacity_changed.emit(value / 100.0)
+
+    def _on_scale_changed(self, value):
+        self._size_val.setText(f"{value}%")
+        self.scale_changed.emit(value / 100.0)
 
     def _on_focus_changed(self, focused_window):
         if self.isVisible() and focused_window != self.windowHandle():
@@ -55,7 +122,7 @@ class SettingsWindow(QFrame):
 
         rect = self.rect().adjusted(2, 2, -2, -2)
         path = QPainterPath()
-        path.addRoundedRect(rect, 25, 25)
+        path.addRoundedRect(rect, 20, 20)
 
         painter.setBrush(QBrush(QColor(*config.BACKGROUND_COLOR)))
         painter.setPen(QPen(QColor(*config.BORDER_COLOR), 1.5))

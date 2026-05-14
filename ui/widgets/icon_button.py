@@ -4,10 +4,12 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtCore import QByteArray, QSize, Qt
 import config
 
-def create_svg_icon(svg_content):
+def create_svg_icon(svg_content, size=None):
+    if size is None:
+        size = config.ICON_SIZE
     svg_bytes = QByteArray(svg_content.encode())
     renderer = QSvgRenderer(svg_bytes)
-    pixmap = QPixmap(config.ICON_SIZE, config.ICON_SIZE)
+    pixmap = QPixmap(size, size)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
     renderer.render(painter)
