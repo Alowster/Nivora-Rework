@@ -398,6 +398,18 @@ def select_region(callback):
     threading.Thread(target=_run, daemon=True).start()
 ```
 
+**Por qué Tkinter en vez del `RegionSelector` PySide6 actual:**
+Tkinter usa las coordenadas físicas del sistema operativo directamente a través de
+`ImageGrab.grab(..., all_screens=True)`, que maneja sin fricciones múltiples monitores
+con resoluciones o DPI distintos. El `RegionSelector` de PySide6 necesita calcular
+manualmente el `devicePixelRatio` y el offset lógico de cada pantalla, lo que puede
+dar capturas desplazadas o mal escaladas en setups con monitores mixtos (ej. 1080p +
+4K). El overlay Tkinter corre en un hilo separado y no interfiere con el event loop
+de PySide6.
+
+**El `RegionSelector` PySide6 actual (`ui/panels/region_selector.py`) se elimina
+y se reemplaza por `services/region_selector.py` con la versión Tkinter.**
+
 **Integración en PySide6** (`ChatPanel`):
 
 ```python
@@ -407,14 +419,35 @@ def iniciar_captura(self):
     select_region(self._on_region_captured)
 
 def _on_region_captured(self, path: str):
+    # Se llama desde el hilo de Tkinter — usar QMetaObject para cruzar al hilo principal
+    from PySide6.QtCore import QMetaObject, Qt
+    QMetaObject.invokeMethod(self, "_on_region_captured_main", Qt.ConnectionType.QueuedConnection,
+                             path)
+
+def _on_region_captured_main(self, path: str):
     self.window().show()
-    self.state["pending"].append({
+    self.pending.append({
         "path": path,
         "mime_type": "image/png",
         "name": "captura.png"
     })
     self._refresh_chips()
 ```
+
+> **Nota sobre hilos**: el callback de `select_region` se ejecuta en el hilo de Tkinter,
+> no en el hilo principal de Qt. Actualizar widgets de PySide6 desde otro hilo provoca
+> crashes. La forma más simple de cruzar al hilo principal es emitir una señal:
+>
+> ```python
+> # En la clase ChatPanel, definir la señal:
+> region_ready = Signal(str)
+>
+> # En __init__:
+> self.region_ready.connect(self._on_region_captured_main)
+>
+> # En iniciar_captura:
+> select_region(lambda path: self.region_ready.emit(path))
+> ```
 
 Diferencia con el código actual en `test`: el `OcrService` ya no se usa. La imagen va
 directamente a Gemini, que extrae texto e interpreta la imagen en el mismo paso.

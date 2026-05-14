@@ -17,14 +17,7 @@ _FOCUS_DELAY = 0.15
 
 
 class HotkeyManager(QObject):
-    """Registra las hotkeys globales definidas en la DB de macros.
-
-    Las macros de tipo 'text' escriben en la app activa con keyboard.write().
-    Las de tipo 'shell' emiten shell_requested para que el panel las ejecute.
-    """
-
     shell_requested = Signal(dict)
-    macro_triggered = Signal(str)  # compatibilidad con conexiones externas
 
     def __init__(self):
         super().__init__()
@@ -50,14 +43,14 @@ class HotkeyManager(QObject):
         if macro["type"] == "text":
             content = macro["content"]
 
-            def _write_to_active_app():
+            def _write():
                 time.sleep(_FOCUS_DELAY)
                 try:
                     keyboard.write(content, delay=0.01)
                 except Exception as e:
                     log.warning("Error al escribir texto de macro: %s", e)
 
-            return lambda: threading.Thread(target=_write_to_active_app, daemon=True).start()
+            return lambda: threading.Thread(target=_write, daemon=True).start()
         else:
             return lambda: self.shell_requested.emit(macro)
 

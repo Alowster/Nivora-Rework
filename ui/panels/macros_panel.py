@@ -5,8 +5,44 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QEvent, Signal
 from PySide6.QtGui import QKeySequence
+
+
 from data.database import get_all_macros, create_macro, update_macro_hotkey, delete_macro
 import subprocess
+
+
+class _ContentTextEdit(QTextEdit):
+    """QTextEdit sin rich text (evita convertir URLs) y con Space funcional en Popup."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setAcceptRichText(False)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Space:
+            self.insertPlainText(" ")
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+_STYLE_IDLE = (
+    "border: 1px solid rgba(255,255,255,0.15);"
+    "border-radius: 6px;"
+    "background: rgba(255,255,255,0.06);"
+    "color: rgba(255,255,255,0.7);"
+    "font-size: 11px;"
+    "padding: 2px 6px;"
+)
+_STYLE_CAPTURING = (
+    "border: 1.5px solid rgba(123,104,238,0.9);"
+    "border-radius: 6px;"
+    "background: rgba(123,104,238,0.18);"
+    "color: white;"
+    "font-size: 11px;"
+    "font-weight: bold;"
+    "padding: 2px 6px;"
+)
+
 
 class HotkeyCapture(QLineEdit):
     confirmed = Signal()
@@ -16,12 +52,16 @@ class HotkeyCapture(QLineEdit):
         self.setReadOnly(True)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setPlaceholderText("Click para asignar...")
+        self.setStyleSheet(_STYLE_IDLE)
         self._capturing = False
+        self._held_keys = []   # teclas no-modificadoras acumuladas
 
     def mousePressEvent(self, event):
         self._capturing = True
+        self._held_keys = []
         self.setText("")
-        self.setPlaceholderText("Pulsa la combinación...")
+        self.setPlaceholderText("Pulsa teclas… Enter para confirmar")
+        self.setStyleSheet(_STYLE_CAPTURING)
         super().mousePressEvent(event)
 
     def keyPressEvent(self, event):
@@ -32,21 +72,39 @@ class HotkeyCapture(QLineEdit):
 
         if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self._capturing = False
+            self._held_keys = []
             self.setPlaceholderText("Click para asignar...")
+            self.setStyleSheet(_STYLE_IDLE)
             self.confirmed.emit()
             return
 
         if key == Qt.Key.Key_Escape:
             self._capturing = False
+            self._held_keys = []
             self.clear()
             self.setPlaceholderText("Click para asignar...")
+            self.setStyleSheet(_STYLE_IDLE)
             return
 
+        # Teclas modificadoras solas: no añadir, solo refrescar display
         if key in (Qt.Key.Key_Control, Qt.Key.Key_Shift,
                    Qt.Key.Key_Alt, Qt.Key.Key_Meta):
+            self._update_display(event.modifiers())
             return
 
-        modifiers = event.modifiers()
+        # Obtener texto de la tecla
+        key_text = event.text()
+        if not key_text or not key_text.isprintable():
+            key_text = QKeySequence(key).toString().lower()
+        key_text = key_text.lower()
+
+        # Acumular sin duplicados
+        if key_text and key_text not in self._held_keys:
+            self._held_keys.append(key_text)
+
+        self._update_display(event.modifiers())
+
+    def _update_display(self, modifiers):
         parts = []
         if modifiers & Qt.KeyboardModifier.ControlModifier:
             parts.append("ctrl")
@@ -54,15 +112,8 @@ class HotkeyCapture(QLineEdit):
             parts.append("shift")
         if modifiers & Qt.KeyboardModifier.AltModifier:
             parts.append("alt")
-
-        key_text = event.text()
-        if not key_text or not key_text.isprintable():
-            key_text = QKeySequence(key).toString().lower()
-        if key_text:
-            parts.append(key_text.lower())
-
-        if parts:
-            self.setText("+".join(parts))
+        parts.extend(self._held_keys)
+        self.setText("+".join(parts))
 
 class ClickableLabel(QLabel):
     clicked = Signal()
@@ -234,7 +285,7 @@ class MacrosPanel(QWidget):
         self.lbl_tipo_desc.setProperty("class", "DescLabel")
         self.lbl_tipo_desc.setWordWrap(True)
 
-        self.input_contenido = QTextEdit()
+        self.input_contenido = _ContentTextEdit()
         self.input_contenido.setPlaceholderText("Escribe el texto a pegar...")
         self.input_contenido.setFixedHeight(55)
         self.input_contenido.setProperty("class", "GlassTextEdit")
@@ -271,6 +322,8 @@ class MacrosPanel(QWidget):
         self._scroll.setWidget(self._lista_widget)
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        self._scroll.viewport().setStyleSheet("QWidget { background: transparent; }")
 
         main_layout.addWidget(form)
         main_layout.addWidget(separador)

@@ -2,7 +2,6 @@ import sys
 import os
 import config
 from data.database import init_db
-from services.ollama_manager import ensure_ollama_running, kill_ollama
 from ui.widgets.island_bar import IslandWindow
 from PySide6.QtWidgets import QApplication
 
@@ -17,8 +16,6 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    ensure_ollama_running()
-    app.aboutToQuit.connect(kill_ollama)
 
     style_path = os.path.join(os.path.dirname(__file__), config.STYLES_FILE)
     if os.path.exists(style_path):
@@ -26,6 +23,7 @@ def main():
             app.setStyleSheet(f.read())
 
     window = IslandWindow()
+
 
     hotkeys = None
     if HotkeyManager is not None:

@@ -9,6 +9,7 @@ from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import (QPainter, QColor, QPen, QBrush, QPainterPath,
                            QIcon)
 from ui.widgets.popup_panel import PopupPanel
+from ui.widgets.settings_window import SettingsWindow
 from ui.panels.chat_panel import ChatPanel
 from ui.panels.history_panel import HistoryPanel
 from ui.panels.macros_panel import MacrosPanel
@@ -71,6 +72,7 @@ class IslandWindow(QWidget):
 
         # Panel popup compartido y contenidos
         self.popup = PopupPanel()
+        self.settings = SettingsWindow()
         self.chat_content = ChatPanel()
         self.lista_content = HistoryPanel()
         self.macros_content = MacrosPanel()
@@ -162,6 +164,8 @@ class IslandWindow(QWidget):
         """Mueve la ventana mientras se arrastra"""
         if event.buttons() == Qt.LeftButton:
             self.move(event.globalPosition().toPoint() - self.drag_position)
+            if self.popup.isVisible():
+                self.popup.reposition(self)
             event.accept()
 
     def on_button_clicked(self, button_name):
@@ -190,7 +194,13 @@ class IslandWindow(QWidget):
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         menu.setWindowFlags(menu.windowFlags() | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
 
+        settings_action = menu.addAction("Ajustes")
+        settings_action.triggered.connect(lambda: self.settings.show_right_of(self))
+
+        menu.addSeparator()
+
         close_action = menu.addAction("Minimizar")
+        close_action.triggered.connect(self.settings.hide)
         close_action.triggered.connect(self.close)
 
         exit_action = menu.addAction("Salir")

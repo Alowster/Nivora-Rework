@@ -99,6 +99,15 @@ def get_stop_icon():
     </svg>
     """
 
+def get_attach_icon():
+    """Icono de adjuntar archivo (clip)"""
+    return """
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <path d="M26 14.5L15.5 25C13.0 27.5 9.0 27.5 6.5 25C4.0 22.5 4.0 18.5 6.5 16L17.5 5C19.2 3.3 21.8 3.3 23.5 5C25.2 6.7 25.2 9.3 23.5 11L13 21.5C12.2 22.3 10.8 22.3 10 21.5C9.2 20.7 9.2 19.3 10 18.5L19.5 9"
+              stroke="white" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.9"/>
+    </svg>
+    """
+
 def get_camera_icon():
     """Icono de cámara (estilo Instagram/Cámara moderna)"""
     return """

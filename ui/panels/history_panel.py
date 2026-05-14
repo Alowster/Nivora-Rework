@@ -52,6 +52,8 @@ class HistoryPanel(QWidget):
         self._scroll.setWidget(self._lista_widget)
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        self._scroll.viewport().setStyleSheet("QWidget { background: transparent; }")
         self.layout_principal.addWidget(self._scroll)
 
         self._actualizar_header()

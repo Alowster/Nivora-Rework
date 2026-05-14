@@ -8,8 +8,9 @@ class PopupPanel(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(
-            Qt.WindowType.Popup |
+            Qt.WindowType.Tool |
             Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint |
             Qt.WindowType.NoDropShadowWindowHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -42,14 +43,20 @@ class PopupPanel(QFrame):
         self._layout.addWidget(widget)
         widget.show()
 
-    def show_below(self, anchor_widget):
+    def _calc_pos(self, anchor_widget):
         anchor_rect = anchor_widget.rect()
-        global_center_x = anchor_widget.mapToGlobal(anchor_rect.center()).x()
-        global_bottom_y = anchor_widget.mapToGlobal(anchor_rect.bottomLeft()).y()
-        x = global_center_x - self.width() // 2
-        y = global_bottom_y
+        cx = anchor_widget.mapToGlobal(anchor_rect.center()).x()
+        by = anchor_widget.mapToGlobal(anchor_rect.bottomLeft()).y()
+        return cx - self.width() // 2, by
+
+    def show_below(self, anchor_widget):
+        x, y = self._calc_pos(anchor_widget)
         self.move(x, y)
         self.show()
+
+    def reposition(self, anchor_widget):
+        x, y = self._calc_pos(anchor_widget)
+        self.move(x, y)
 
     def paintEvent(self, event):
         painter = QPainter(self)
