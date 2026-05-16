@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 import config
-from PySide6.QtWidgets import (QApplication, QWidget, QPushButton,
+from PySide6.QtWidgets import (QApplication, QWidget, QPushButton, QLabel,
                                QHBoxLayout, QGraphicsDropShadowEffect,
                                QMenu, QSystemTrayIcon)
 from PySide6.QtCore import Qt, QPoint
@@ -61,8 +61,15 @@ class IslandWindow(QWidget):
         main_layout.addWidget(self.button2)
         main_layout.addWidget(self.button3)
 
-        # Espaciador
+        # Indicador de arrastre
+        self.drag_hint = QLabel("⠿")
+        self.drag_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.drag_hint.setCursor(Qt.CursorShape.SizeAllCursor)
+        self.drag_hint.setStyleSheet("color: rgba(255,255,255,0.22); font-size: 15px;")
+        self.drag_hint.setFixedWidth(18)
         main_layout.addSpacing(10)
+        main_layout.addWidget(self.drag_hint)
+        main_layout.addSpacing(4)
 
         # Botón de menú
         self.menu_button = self.create_menu_button()
@@ -76,6 +83,7 @@ class IslandWindow(QWidget):
         self.settings = SettingsWindow()
         self.settings.opacity_changed.connect(self._apply_opacity)
         self.settings.scale_changed.connect(self._apply_scale)
+        self.settings.box_scale_changed.connect(self._apply_box_scale)
 
         # Valores base para el escalado
         self._base_window_width = config.WINDOW_WIDTH
@@ -86,6 +94,8 @@ class IslandWindow(QWidget):
         self._base_margin_h = config.LAYOUT_MARGIN_HORIZONTAL
         self._base_margin_v = config.LAYOUT_MARGIN_VERTICAL
         self._base_spacing = config.BUTTON_SPACING
+        self._base_popup_width = 329
+        self._base_popup_height = 450
         self.chat_content = ChatPanel()
         self.lista_content = HistoryPanel()
         self.macros_content = MacrosPanel()
@@ -96,6 +106,13 @@ class IslandWindow(QWidget):
             "lista": (self.lista_content, self.button2),
             "macros": (self.macros_content, self.button3),
         }
+
+        self._button_svgs = {
+            "chat": icons.get_chat_icon(),
+            "lista": icons.get_clock_icon(),
+            "macros": icons.get_sparkles_icon(),
+        }
+        self._active_button_name = None
 
         self.lista_content.conversation_selected.connect(self._abrir_conversacion)
 
@@ -188,10 +205,18 @@ class IslandWindow(QWidget):
             event.accept()
 
     def _set_active_button(self, active_name):
-        """Pone en GradientButton el botón activo y OutlineButton el resto."""
+        """Pone en GradientButton el botón activo y OutlineButton el resto.
+        El botón activo muestra icono de cruz; los demás, su icono original."""
+        self._active_button_name = active_name
+        close_icon = create_svg_icon(icons.get_close_icon())
         for name, (_, btn) in self._content_map.items():
-            new_class = "GradientButton" if name == active_name else "OutlineButton"
-            btn.setProperty("class", new_class)
+            icon_size = btn.iconSize().width()
+            if name == active_name:
+                btn.setProperty("class", "GradientButton")
+                btn.setIcon(close_icon)
+            else:
+                btn.setProperty("class", "OutlineButton")
+                btn.setIcon(create_svg_icon(self._button_svgs[name], icon_size))
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
@@ -264,7 +289,10 @@ class IslandWindow(QWidget):
         margin_v = int(self._base_margin_v * scale)
         spacing = int(self._base_spacing * scale)
 
+        center_x = self.x() + self.width() // 2
+        center_y = self.y() + self.height() // 2
         self.setFixedSize(new_w, new_h)
+        self.move(center_x - new_w // 2, center_y - new_h // 2)
         self.main_layout.setContentsMargins(margin_h, margin_v, margin_h, margin_v)
         self.main_layout.setSpacing(spacing)
 
@@ -275,7 +303,20 @@ class IslandWindow(QWidget):
             btn.setIconSize(QSize(icon_size, icon_size))
             btn.setStyleSheet(f"border-radius: {btn_radius}px;")
 
+        if self._active_button_name:
+            _, active_btn = self._content_map[self._active_button_name]
+            active_btn.setIcon(create_svg_icon(icons.get_close_icon(), icon_size))
+            active_btn.setIconSize(QSize(icon_size, icon_size))
+
         self.menu_button.setFixedSize(menu_w, btn_size)
         self.menu_button.setStyleSheet(f"border-radius: {menu_radius}px;")
 
-        self.center_window()
+        if self.popup.isVisible():
+            self.popup.reposition(self)
+
+    def _apply_box_scale(self, scale: float):
+        popup_w = int(self._base_popup_width * scale)
+        popup_h = int(self._base_popup_height * scale)
+        self.popup.setFixedSize(popup_w, popup_h)
+        if self.popup.isVisible():
+            self.popup.reposition(self)

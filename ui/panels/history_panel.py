@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QScrollArea
 from PySide6.QtCore import Qt, Signal
 
-from data.database import get_all_conversations
+from data.database import get_all_conversations, delete_conversation
 
 MESES_ES = {
     1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
@@ -88,11 +88,29 @@ class HistoryPanel(QWidget):
                 item.widget().deleteLater()
         convs = self._grupos[self._meses[self._mes_idx]]
         for conv in convs:
+            fila = QWidget()
+            fila_layout = QHBoxLayout(fila)
+            fila_layout.setContentsMargins(0, 0, 0, 0)
+            fila_layout.setSpacing(4)
+
             btn = QPushButton(conv["name"])
             btn.setProperty("class", "TaskItem")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.clicked.connect(lambda _, cid=conv["id"]: self.conversation_selected.emit(cid))
-            self._lista_layout.insertWidget(self._lista_layout.count() - 1, btn)
+
+            btn_del = QPushButton("✕")
+            btn_del.setProperty("class", "DeleteButton")
+            btn_del.setFixedSize(24, 24)
+            btn_del.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_del.clicked.connect(lambda _, cid=conv["id"]: self._eliminar_conversacion(cid))
+
+            fila_layout.addWidget(btn)
+            fila_layout.addWidget(btn_del)
+            self._lista_layout.insertWidget(self._lista_layout.count() - 1, fila)
+
+    def _eliminar_conversacion(self, conversation_id):
+        delete_conversation(conversation_id)
+        self.refresh()
 
     def _mes_anterior(self):
         if self._mes_idx < len(self._meses) - 1:

@@ -8,7 +8,8 @@ from PySide6.QtGui import QPainter, QColor, QBrush, QPen, QPainterPath
 
 class SettingsWindow(QFrame):
     opacity_changed = Signal(float)   # 0.0 – 1.0
-    scale_changed = Signal(float)     # factor, e.g. 0.7 – 1.5
+    scale_changed = Signal(float)     # factor pill
+    box_scale_changed = Signal(float) # factor box
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -20,7 +21,7 @@ class SettingsWindow(QFrame):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setFixedSize(230, 210)
+        self.setFixedSize(230, 270)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 16, 18, 18)
@@ -69,7 +70,7 @@ class SettingsWindow(QFrame):
         size_row.setSpacing(8)
 
         self.size_slider = QSlider(Qt.Orientation.Horizontal)
-        self.size_slider.setRange(70, 150)
+        self.size_slider.setRange(85, 150)
         self.size_slider.setValue(100)
         self.size_slider.setProperty("class", "SettingsSlider")
         size_row.addWidget(self.size_slider)
@@ -81,10 +82,36 @@ class SettingsWindow(QFrame):
 
         layout.addLayout(size_row)
 
+        layout.addSpacing(20)
+
+        # ── Tamaño box ────────────────────────────────────────────
+        box_desc = QLabel("Tamaño de la ventana")
+        box_desc.setProperty("class", "SettingsDesc")
+        layout.addWidget(box_desc)
+
+        layout.addSpacing(6)
+
+        box_row = QHBoxLayout()
+        box_row.setSpacing(8)
+
+        self.box_slider = QSlider(Qt.Orientation.Horizontal)
+        self.box_slider.setRange(85, 150)
+        self.box_slider.setValue(100)
+        self.box_slider.setProperty("class", "SettingsSlider")
+        box_row.addWidget(self.box_slider)
+
+        self._box_val = QLabel("100%")
+        self._box_val.setFixedWidth(34)
+        self._box_val.setProperty("class", "SettingsValue")
+        box_row.addWidget(self._box_val)
+
+        layout.addLayout(box_row)
+
         layout.addStretch()
 
         self.opacity_slider.valueChanged.connect(self._on_opacity_changed)
         self.size_slider.valueChanged.connect(self._on_scale_changed)
+        self.box_slider.valueChanged.connect(self._on_box_scale_changed)
 
         QApplication.instance().focusWindowChanged.connect(self._on_focus_changed)
         QApplication.instance().installEventFilter(self)
@@ -96,6 +123,10 @@ class SettingsWindow(QFrame):
     def _on_scale_changed(self, value):
         self._size_val.setText(f"{value}%")
         self.scale_changed.emit(value / 100.0)
+
+    def _on_box_scale_changed(self, value):
+        self._box_val.setText(f"{value}%")
+        self.box_scale_changed.emit(value / 100.0)
 
     def _on_focus_changed(self, focused_window):
         if self.isVisible() and focused_window != self.windowHandle():
