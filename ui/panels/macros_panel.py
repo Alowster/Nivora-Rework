@@ -6,10 +6,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent, Signal
 from PySide6.QtGui import QKeySequence
 
-
 from data.database import get_all_macros, create_macro, update_macro_hotkey, delete_macro
 import subprocess
-
 
 class _ContentTextEdit(QTextEdit):
     """QTextEdit sin rich text (evita convertir URLs) y con Space funcional en Popup."""
@@ -42,7 +40,6 @@ _STYLE_CAPTURING = (
     "font-weight: bold;"
     "padding: 2px 6px;"
 )
-
 
 class HotkeyCapture(QLineEdit):
     confirmed = Signal()

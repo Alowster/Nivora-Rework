@@ -15,6 +15,7 @@ def main():
     init_db()
 
     app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     app.setStyle("Fusion")
 
     style_path = os.path.join(os.path.dirname(__file__), config.STYLES_FILE)

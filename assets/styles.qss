@@ -94,7 +94,7 @@ QMenu::separator {
 QPushButton,
 .AddButton {
     background-color: rgba(123, 104, 238, 0.40);
-    border: 1px solid rgba(123, 104, 238, 0.70);
+    border: 2px solid rgba(123, 104, 238, 0.70);
 }
 
 .GradientButton:hover,
@@ -113,8 +113,13 @@ QPushButton:pressed,
 }
 
 /* Radios individuales */
-QPushButton  { border-radius: 20px; }
-.AddButton   { border-radius: 8px; }
+QPushButton          { border-radius: 20px; }
+.AddButton           { border-radius: 8px; }
+QPushButton#BtnAttach                    { border-radius: 8px; }
+QLineEdit#ChatInput                      { border-radius: 8px;  border: 1px solid rgba(255, 255, 255, 0.10); }
+QPushButton#BtnEnviar,
+QPushButton#BtnExtra,
+QPushButton#BtnStop                      { border-radius: 8px; }
 
 /* NavButton — dimensiones propias */
 .NavButton {

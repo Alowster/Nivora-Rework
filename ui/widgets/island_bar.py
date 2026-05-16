@@ -53,7 +53,7 @@ class IslandWindow(QWidget):
 
         # Crear botones con iconos
         self._icon_svgs = [icons.get_chat_icon(), icons.get_clock_icon(), icons.get_sparkles_icon()]
-        self.button1 = create_icon_button(self._icon_svgs[0], "GradientButton", "chat", self.on_button_clicked)
+        self.button1 = create_icon_button(self._icon_svgs[0], "OutlineButton", "chat", self.on_button_clicked)
         self.button2 = create_icon_button(self._icon_svgs[1], "OutlineButton", "lista", self.on_button_clicked)
         self.button3 = create_icon_button(self._icon_svgs[2], "OutlineButton", "macros", self.on_button_clicked)
 
@@ -170,6 +170,7 @@ class IslandWindow(QWidget):
     def hideEvent(self, event):
         self.popup.hide()
         self.settings.hide()
+        self._set_active_button(None)
         super().hideEvent(event)
 
     def mousePressEvent(self, event):
@@ -186,6 +187,14 @@ class IslandWindow(QWidget):
                 self.popup.reposition(self)
             event.accept()
 
+    def _set_active_button(self, active_name):
+        """Pone en GradientButton el botón activo y OutlineButton el resto."""
+        for name, (_, btn) in self._content_map.items():
+            new_class = "GradientButton" if name == active_name else "OutlineButton"
+            btn.setProperty("class", new_class)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
     def on_button_clicked(self, button_name):
         """Maneja los clics en los botones principales"""
         if button_name not in self._content_map:
@@ -195,10 +204,12 @@ class IslandWindow(QWidget):
 
         if self.popup.isVisible() and self.popup._current_content is content:
             self.popup.hide()
+            self._set_active_button(None)
             return
 
         self.popup.set_content(content)
         self.popup.show_below(self)
+        self._set_active_button(button_name)
 
         if button_name == "chat":
             self.chat_content.focus_input()

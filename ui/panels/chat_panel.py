@@ -2,7 +2,7 @@ import mimetypes
 import os
 
 import markdown as md
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal, QSize
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QVBoxLayout,
     QScrollArea, QLabel, QPushButton, QTextEdit, QFileDialog,
@@ -80,29 +80,36 @@ class ChatPanel(QWidget):
 
         self.btn_attach = create_icon_button(get_attach_icon(), "GradientButton", "attach", lambda _: self._abrir_archivo())
         self.btn_attach.setObjectName("BtnAttach")
-        self.btn_attach.setFixedSize(36, 36)
+        self.btn_attach.setFixedSize(34, 34)
+        self.btn_attach.setIconSize(QSize(17, 17))
 
         self.input_field = QLineEdit()
         self.input_field.setPlaceholderText("Hazme una pregunta...")
-        self.input_field.setFixedHeight(45)
+        self.input_field.setFixedHeight(36)
         self.input_field.setObjectName("ChatInput")
         self.input_field.returnPressed.connect(self.enviar_mensaje)
 
         self.btn_enviar = create_icon_button(get_send_icon(), "GradientButton", "enviar", lambda _: self.enviar_mensaje())
         self.btn_enviar.setObjectName("BtnEnviar")
+        self.btn_enviar.setFixedSize(34, 34)
+        self.btn_enviar.setIconSize(QSize(17, 17))
 
         self.btn_extra = create_icon_button(get_camera_icon(), "GradientButton", "camara", lambda _: self.iniciar_captura())
         self.btn_extra.setObjectName("BtnExtra")
+        self.btn_extra.setFixedSize(34, 34)
+        self.btn_extra.setIconSize(QSize(17, 17))
 
         self.btn_stop = create_icon_button(get_stop_icon(), "GradientButton", "stop", lambda _: self.detener_generacion())
         self.btn_stop.setObjectName("BtnStop")
+        self.btn_stop.setFixedSize(34, 34)
+        self.btn_stop.setIconSize(QSize(17, 17))
         self.btn_stop.setVisible(False)
 
         input_container.addWidget(self.btn_attach)
         input_container.addWidget(self.input_field)
         input_container.addWidget(self.btn_stop)
-        input_container.addWidget(self.btn_enviar)
         input_container.addWidget(self.btn_extra)
+        input_container.addWidget(self.btn_enviar)
         main_layout.addLayout(input_container)
 
     # ── Nombre conversación ───────────────────────────────────────────────────
