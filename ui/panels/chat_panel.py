@@ -3,6 +3,7 @@ import os
 
 import markdown as md
 from PySide6.QtCore import Qt, QTimer, Signal, QSize
+from translations import t
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QVBoxLayout,
     QScrollArea, QLabel, QPushButton, QTextEdit, QFileDialog,
@@ -41,12 +42,12 @@ class ChatPanel(QWidget):
         self.lbl_conv_name.setStyleSheet("color: rgba(255,255,255,100); font-size: 11px;")
         main_layout.addWidget(self.lbl_conv_name)
 
-        new_chat_btn = QPushButton("+ Nueva conversación")
-        new_chat_btn.setFixedHeight(28)
-        new_chat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        new_chat_btn.clicked.connect(self.nueva_conversacion)
-        new_chat_btn.setStyleSheet("border-radius: 12px")
-        main_layout.addWidget(new_chat_btn)
+        self.new_chat_btn = QPushButton(t("new_conversation"))
+        self.new_chat_btn.setFixedHeight(28)
+        self.new_chat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.new_chat_btn.clicked.connect(self.nueva_conversacion)
+        self.new_chat_btn.setStyleSheet("border-radius: 12px")
+        main_layout.addWidget(self.new_chat_btn)
 
         self.messages_widget = QWidget()
         self.messages_layout = QVBoxLayout(self.messages_widget)
@@ -84,7 +85,7 @@ class ChatPanel(QWidget):
         self.btn_attach.setIconSize(QSize(17, 17))
 
         self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Hazme una pregunta...")
+        self.input_field.setPlaceholderText(t("ask_placeholder"))
         self.input_field.setFixedHeight(36)
         self.input_field.setObjectName("ChatInput")
         self.input_field.returnPressed.connect(self.enviar_mensaje)
@@ -125,6 +126,10 @@ class ChatPanel(QWidget):
     def focus_input(self):
         self.input_field.setFocus()
 
+    def retranslate_ui(self):
+        self.new_chat_btn.setText(t("new_conversation"))
+        self.input_field.setPlaceholderText(t("ask_placeholder"))
+
     def insertar_texto(self, texto):
         self.input_field.setText(texto)
         self.input_field.setFocus()
@@ -137,8 +142,7 @@ class ChatPanel(QWidget):
         # y re-mostramos el popup después.
         popup = self.parent()
 
-        dialog = QFileDialog(None, "Adjuntar archivo", "",
-                             "Imágenes y documentos (*.png *.jpg *.jpeg *.gif *.webp *.pdf *.txt *.csv)")
+        dialog = QFileDialog(None, t("attach_file"), "", t("images_docs"))
         dialog.setWindowFlags(dialog.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
         dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
 

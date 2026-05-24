@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import config
+from translations import t
 from PySide6.QtWidgets import (QApplication, QWidget, QPushButton, QLabel,
                                QHBoxLayout, QGraphicsDropShadowEffect,
                                QMenu, QSystemTrayIcon)
@@ -84,6 +85,7 @@ class IslandWindow(QWidget):
         self.settings.opacity_changed.connect(self._apply_opacity)
         self.settings.scale_changed.connect(self._apply_scale)
         self.settings.box_scale_changed.connect(self._apply_box_scale)
+        self.settings.language_changed.connect(self._on_language_changed)
 
         # Valores base para el escalado
         self._base_window_width = config.WINDOW_WIDTH
@@ -123,10 +125,10 @@ class IslandWindow(QWidget):
         icon_pixmap = create_svg_icon(icons.get_chat_icon()).pixmap(64, 64)
         self.tray_icon.setIcon(QIcon(icon_pixmap))
         tray_menu = QMenu()
-        show_action = tray_menu.addAction("Mostrar Island")
-        show_action.triggered.connect(self.show)
-        quit_action = tray_menu.addAction("Salir por completo")
-        quit_action.triggered.connect(QApplication.instance().quit)
+        self._tray_show_action = tray_menu.addAction(t("show_island"))
+        self._tray_show_action.triggered.connect(self.show)
+        self._tray_quit_action = tray_menu.addAction(t("exit_completely"))
+        self._tray_quit_action.triggered.connect(QApplication.instance().quit)
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
@@ -248,16 +250,16 @@ class IslandWindow(QWidget):
         menu.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         menu.setWindowFlags(menu.windowFlags() | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
 
-        settings_action = menu.addAction("Ajustes")
+        settings_action = menu.addAction(t("settings_action"))
         settings_action.triggered.connect(lambda: self.settings.show_right_of(self))
 
         menu.addSeparator()
 
-        close_action = menu.addAction("Minimizar")
+        close_action = menu.addAction(t("minimize"))
         close_action.triggered.connect(self.settings.hide)
         close_action.triggered.connect(self.close)
 
-        exit_action = menu.addAction("Salir")
+        exit_action = menu.addAction(t("exit"))
         exit_action.triggered.connect(QApplication.instance().quit)
 
         menu.exec(self.menu_button.mapToGlobal(self.menu_button.rect().center()) - QPoint(menu.sizeHint().width() // 2, (-self.menu_button.height() - 20) // 2))
@@ -320,3 +322,10 @@ class IslandWindow(QWidget):
         self.popup.setFixedSize(popup_w, popup_h)
         if self.popup.isVisible():
             self.popup.reposition(self)
+
+    def _on_language_changed(self, lang: str):
+        self._tray_show_action.setText(t("show_island"))
+        self._tray_quit_action.setText(t("exit_completely"))
+        self.chat_content.retranslate_ui()
+        self.macros_content.retranslate_ui()
+        self.lista_content.retranslate_ui()

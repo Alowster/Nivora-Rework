@@ -9,6 +9,7 @@ from PySide6.QtGui import QKeySequence
 import logging
 
 from data.database import get_all_macros, create_macro, update_macro_hotkey, delete_macro
+from translations import t
 import subprocess
 
 log = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class HotkeyCapture(QLineEdit):
         super().__init__(parent)
         self.setReadOnly(True)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setPlaceholderText("Click para asignar...")
+        self.setPlaceholderText(t("assign_hotkey"))
         self.setStyleSheet(_STYLE_IDLE)
         self._capturing = False
         self._held_keys = []   # teclas no-modificadoras acumuladas
@@ -61,7 +62,7 @@ class HotkeyCapture(QLineEdit):
         self._capturing = True
         self._held_keys = []
         self.setText("")
-        self.setPlaceholderText("Pulsa teclas… Enter para confirmar")
+        self.setPlaceholderText(t("press_keys"))
         self.setStyleSheet(_STYLE_CAPTURING)
         super().mousePressEvent(event)
 
@@ -74,7 +75,7 @@ class HotkeyCapture(QLineEdit):
         if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self._capturing = False
             self._held_keys = []
-            self.setPlaceholderText("Click para asignar...")
+            self.setPlaceholderText(t("assign_hotkey"))
             self.setStyleSheet(_STYLE_IDLE)
             self.confirmed.emit()
             return
@@ -83,7 +84,7 @@ class HotkeyCapture(QLineEdit):
             self._capturing = False
             self._held_keys = []
             self.clear()
-            self.setPlaceholderText("Click para asignar...")
+            self.setPlaceholderText(t("assign_hotkey"))
             self.setStyleSheet(_STYLE_IDLE)
             return
 
@@ -255,19 +256,19 @@ class MacrosPanel(QWidget):
         form_layout.setContentsMargins(0, 0, 0, 0)
         form_layout.setSpacing(6)
 
-        lbl_nueva = QLabel("Nueva macro")
-        lbl_nueva.setProperty("class", "SectionLabel")
+        self.lbl_nueva = QLabel(t("new_macro"))
+        self.lbl_nueva.setProperty("class", "SectionLabel")
 
         self.input_nombre = QLineEdit()
-        self.input_nombre.setPlaceholderText("Nombre de la macro...")
+        self.input_nombre.setPlaceholderText(t("macro_name_placeholder"))
         self.input_nombre.setFixedHeight(32)
         self.input_nombre.setProperty("class", "GlassInput")
 
         # Toggle tipo con QButtonGroup para exclusividad real
         tipo_row = QHBoxLayout()
         tipo_row.setSpacing(6)
-        self.btn_text = QPushButton("Pegar texto")
-        self.btn_shell = QPushButton("Ejecutar")
+        self.btn_text = QPushButton(t("paste_text"))
+        self.btn_shell = QPushButton(t("run"))
         self._btn_group = QButtonGroup(self)
         self._btn_group.setExclusive(True)
         for i, btn in enumerate((self.btn_text, self.btn_shell)):
@@ -282,27 +283,27 @@ class MacrosPanel(QWidget):
         tipo_row.addWidget(self.btn_text)
         tipo_row.addWidget(self.btn_shell)
 
-        self.lbl_tipo_desc = QLabel("El contenido se pegará en el chat al ejecutar.")
+        self.lbl_tipo_desc = QLabel(t("paste_hint"))
         self.lbl_tipo_desc.setProperty("class", "DescLabel")
         self.lbl_tipo_desc.setWordWrap(True)
 
         self.input_contenido = _ContentTextEdit()
-        self.input_contenido.setPlaceholderText("Escribe el texto a pegar...")
+        self.input_contenido.setPlaceholderText(t("paste_placeholder"))
         self.input_contenido.setFixedHeight(55)
         self.input_contenido.setProperty("class", "GlassTextEdit")
 
-        btn_guardar = QPushButton("+ Añadir macro")
-        btn_guardar.setFixedHeight(30)
-        btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_guardar.setProperty("class", "AddButton")
-        btn_guardar.clicked.connect(self._guardar_macro)
+        self.btn_guardar = QPushButton(t("add_macro"))
+        self.btn_guardar.setFixedHeight(30)
+        self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_guardar.setProperty("class", "AddButton")
+        self.btn_guardar.clicked.connect(self._guardar_macro)
 
-        form_layout.addWidget(lbl_nueva)
+        form_layout.addWidget(self.lbl_nueva)
         form_layout.addWidget(self.input_nombre)
         form_layout.addLayout(tipo_row)
         form_layout.addWidget(self.lbl_tipo_desc)
         form_layout.addWidget(self.input_contenido)
-        form_layout.addWidget(btn_guardar)
+        form_layout.addWidget(self.btn_guardar)
 
         # ── Separador ──
         separador = QFrame()
@@ -310,8 +311,8 @@ class MacrosPanel(QWidget):
         separador.setProperty("class", "HSeparator")
 
         # ── Lista inferior ──
-        lbl_lista = QLabel("Mis macros")
-        lbl_lista.setProperty("class", "SectionLabel")
+        self.lbl_lista = QLabel(t("my_macros"))
+        self.lbl_lista.setProperty("class", "SectionLabel")
 
         self._lista_widget = QWidget()
         self._lista_layout = QVBoxLayout(self._lista_widget)
@@ -328,17 +329,34 @@ class MacrosPanel(QWidget):
 
         main_layout.addWidget(form)
         main_layout.addWidget(separador)
-        main_layout.addWidget(lbl_lista)
+        main_layout.addWidget(self.lbl_lista)
         main_layout.addWidget(self._scroll)
 
     def _on_tipo_changed(self, btn_id):
         self._tipo = "text" if btn_id == 0 else "shell"
         if self._tipo == "text":
-            self.lbl_tipo_desc.setText("El contenido se pegará en el chat al ejecutar.")
-            self.input_contenido.setPlaceholderText("Escribe el texto a pegar...")
+            self.lbl_tipo_desc.setText(t("paste_hint"))
+            self.input_contenido.setPlaceholderText(t("paste_placeholder"))
         else:
-            self.lbl_tipo_desc.setText("El contenido se ejecutará como comando de sistema.")
-            self.input_contenido.setPlaceholderText("Ej: notepad.exe  /  start chrome https://www.youtube.com/")
+            self.lbl_tipo_desc.setText(t("command_hint"))
+            self.input_contenido.setPlaceholderText(t("command_example"))
+
+    def retranslate_ui(self):
+        self.lbl_nueva.setText(t("new_macro"))
+        self.input_nombre.setPlaceholderText(t("macro_name_placeholder"))
+        self.btn_text.setText(t("paste_text"))
+        self.btn_shell.setText(t("run"))
+        self.btn_guardar.setText(t("add_macro"))
+        self.lbl_lista.setText(t("my_macros"))
+        # Refresh desc/placeholder según tipo actual
+        if self._tipo == "text":
+            self.lbl_tipo_desc.setText(t("paste_hint"))
+            self.input_contenido.setPlaceholderText(t("paste_placeholder"))
+        else:
+            self.lbl_tipo_desc.setText(t("command_hint"))
+            self.input_contenido.setPlaceholderText(t("command_example"))
+        # Rebuild macro list so HotkeyCapture placeholders update
+        self._cargar_macros()
 
     def _guardar_macro(self):
         nombre = self.input_nombre.text().strip()
@@ -359,7 +377,7 @@ class MacrosPanel(QWidget):
 
         macros = get_all_macros()
         if not macros:
-            lbl = QLabel("Sin macros. ¡Crea una arriba!")
+            lbl = QLabel(t("no_macros"))
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setProperty("class", "EmptyLabel")
             self._lista_layout.insertWidget(0, lbl)

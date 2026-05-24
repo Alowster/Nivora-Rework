@@ -2,12 +2,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushBu
 from PySide6.QtCore import Qt, Signal
 
 from data.database import get_all_conversations, delete_conversation
-
-MESES_ES = {
-    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
-    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
-    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
-}
+from translations import t
 
 class HistoryPanel(QWidget):
     conversation_selected = Signal(int)
@@ -71,12 +66,13 @@ class HistoryPanel(QWidget):
 
     def _actualizar_header(self):
         if not self._meses:
-            self.lbl_mes.setText("Sin conversaciones")
+            self.lbl_mes.setText(t("no_conversations"))
             self.btn_anterior.setEnabled(False)
             self.btn_siguiente.setEnabled(False)
             return
         anyo, mes = self._meses[self._mes_idx]
-        self.lbl_mes.setText(f"{MESES_ES[mes]} {anyo}")
+        month_names = t("month_names")
+        self.lbl_mes.setText(f"{month_names[mes - 1]} {anyo}")
         self.btn_anterior.setEnabled(self._mes_idx < len(self._meses) - 1)
         self.btn_siguiente.setEnabled(self._mes_idx > 0)
         self._mostrar_mes()
@@ -124,4 +120,7 @@ class HistoryPanel(QWidget):
 
     def refresh(self):
         self.cargar_y_agrupar()
+        self._actualizar_header()
+
+    def retranslate_ui(self):
         self._actualizar_header()

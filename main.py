@@ -2,6 +2,7 @@ import sys
 import os
 import logging
 import config
+import translations
 from data.database import init_db
 from ui.widgets.island_bar import IslandWindow
 from PySide6.QtWidgets import QApplication
@@ -22,6 +23,8 @@ def main():
     except Exception as _hk_err:
         log.error("No se pudo importar HotkeyManager: %s", _hk_err, exc_info=True)
         HotkeyManager = None
+
+    translations.load_language()
 
     try:
         init_db()

@@ -1,7 +1,9 @@
 import config
+import translations
+from translations import t
 
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
-                               QApplication, QSlider)
+                               QApplication, QSlider, QPushButton, QButtonGroup)
 from PySide6.QtCore import Qt, QEvent, Signal
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen, QPainterPath
 
@@ -10,6 +12,7 @@ class SettingsWindow(QFrame):
     opacity_changed = Signal(float)   # 0.0 – 1.0
     scale_changed = Signal(float)     # factor pill
     box_scale_changed = Signal(float) # factor box
+    language_changed = Signal(str)    # "es" or "en"
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -21,23 +24,53 @@ class SettingsWindow(QFrame):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setFixedSize(230, 270)
+        self.setFixedSize(230, 330)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 16, 18, 18)
         layout.setSpacing(0)
 
-        title = QLabel("Ajustes")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setProperty("class", "SectionLabel")
-        layout.addWidget(title)
+        self._title = QLabel(t("settings_title"))
+        self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._title.setProperty("class", "SectionLabel")
+        layout.addWidget(self._title)
 
         layout.addSpacing(16)
 
+        # ── Idioma ────────────────────────────────────────────────
+        self._lang_desc = QLabel(t("language"))
+        self._lang_desc.setProperty("class", "SettingsDesc")
+        layout.addWidget(self._lang_desc)
+
+        layout.addSpacing(6)
+
+        lang_row = QHBoxLayout()
+        lang_row.setSpacing(6)
+        self._btn_es = QPushButton("ES")
+        self._btn_en = QPushButton("EN")
+        self._lang_group = QButtonGroup(self)
+        self._lang_group.setExclusive(True)
+        for btn in (self._btn_es, self._btn_en):
+            btn.setFixedHeight(26)
+            btn.setCheckable(True)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setProperty("class", "ToggleButton")
+            self._lang_group.addButton(btn)
+        current = translations.get_language()
+        self._btn_es.setChecked(current == "es")
+        self._btn_en.setChecked(current == "en")
+        self._btn_es.clicked.connect(lambda: self._on_language_changed("es"))
+        self._btn_en.clicked.connect(lambda: self._on_language_changed("en"))
+        lang_row.addWidget(self._btn_es)
+        lang_row.addWidget(self._btn_en)
+        layout.addLayout(lang_row)
+
+        layout.addSpacing(20)
+
         # ── Opacidad ──────────────────────────────────────────────
-        opacity_desc = QLabel("Opacidad de la ventana")
-        opacity_desc.setProperty("class", "SettingsDesc")
-        layout.addWidget(opacity_desc)
+        self._opacity_desc = QLabel(t("opacity"))
+        self._opacity_desc.setProperty("class", "SettingsDesc")
+        layout.addWidget(self._opacity_desc)
 
         layout.addSpacing(6)
 
@@ -60,9 +93,9 @@ class SettingsWindow(QFrame):
         layout.addSpacing(20)
 
         # ── Tamaño UI ─────────────────────────────────────────────
-        size_desc = QLabel("Tamaño de la interfaz")
-        size_desc.setProperty("class", "SettingsDesc")
-        layout.addWidget(size_desc)
+        self._size_desc = QLabel(t("ui_size"))
+        self._size_desc.setProperty("class", "SettingsDesc")
+        layout.addWidget(self._size_desc)
 
         layout.addSpacing(6)
 
@@ -85,9 +118,9 @@ class SettingsWindow(QFrame):
         layout.addSpacing(20)
 
         # ── Tamaño box ────────────────────────────────────────────
-        box_desc = QLabel("Tamaño de la ventana")
-        box_desc.setProperty("class", "SettingsDesc")
-        layout.addWidget(box_desc)
+        self._box_desc = QLabel(t("window_size"))
+        self._box_desc.setProperty("class", "SettingsDesc")
+        layout.addWidget(self._box_desc)
 
         layout.addSpacing(6)
 
@@ -115,6 +148,19 @@ class SettingsWindow(QFrame):
 
         QApplication.instance().focusWindowChanged.connect(self._on_focus_changed)
         QApplication.instance().installEventFilter(self)
+
+    def _on_language_changed(self, lang: str):
+        translations.set_language(lang)
+        translations.save_language(lang)
+        self.retranslate_ui()
+        self.language_changed.emit(lang)
+
+    def retranslate_ui(self):
+        self._title.setText(t("settings_title"))
+        self._lang_desc.setText(t("language"))
+        self._opacity_desc.setText(t("opacity"))
+        self._size_desc.setText(t("ui_size"))
+        self._box_desc.setText(t("window_size"))
 
     def _on_opacity_changed(self, value):
         self._opacity_val.setText(f"{value}%")
