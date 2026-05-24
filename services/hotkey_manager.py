@@ -58,8 +58,8 @@ class HotkeyManager(QObject):
         for h in self._handles:
             try:
                 keyboard.remove_hotkey(h)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Error al desregistrar hotkey: %s", e)
         self._handles.clear()
 
     def shutdown(self):

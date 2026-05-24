@@ -6,8 +6,12 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent, Signal
 from PySide6.QtGui import QKeySequence
 
+import logging
+
 from data.database import get_all_macros, create_macro, update_macro_hotkey, delete_macro
 import subprocess
+
+log = logging.getLogger(__name__)
 
 class _ContentTextEdit(QTextEdit):
     """QTextEdit sin rich text (evita convertir URLs) y con Space funcional en Popup."""
@@ -375,7 +379,7 @@ class MacrosPanel(QWidget):
             try:
                 subprocess.Popen(macro["content"], shell=True)
             except Exception as e:
-                print(f"Error ejecutando macro shell: {e}")
+                log.error("Error ejecutando macro shell: %s", e, exc_info=True)
 
     def _eliminar(self, macro_id):
         delete_macro(macro_id)
